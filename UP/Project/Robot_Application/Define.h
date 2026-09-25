@@ -134,6 +134,5 @@
 #define Pitch_Angle_Limit_Max -40
 #define Pitch_Angle_Limit_Min 7
 
-#define Radain2Angle					   57.29578f
  
 #endif

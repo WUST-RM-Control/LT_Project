@@ -369,8 +369,7 @@ void Chassis_Task(void *argument)
 		else
 		{
 			//电管底盘失能 关节电机也失能
-//			if( (Chassis_Control_Struct.Chassis_State == Chassis_OFF) || (Robo_State.power_management_chassis_output == 0) )
-			if( (Chassis_Control_Struct.Chassis_State == Chassis_OFF) || (Remote_Control_Struct.If_Remote_Connect == 0) || (RoboControl_Struct.Robo_Enable == 0) )
+			if( (Chassis_Control_Struct.Chassis_State == Chassis_OFF) || (Robo_State.power_management_chassis_output == 0) )
 			{
 					Motor_DM_CMD_MIT(&Chassis_JointMotor_CAN, Chassis_JointMotor1_Send_CAN_ID, 0, 0, 0, 0, 0);
 					Motor_DM_CMD_MIT(&Chassis_JointMotor_CAN, Chassis_JointMotor2_Send_CAN_ID, 0, 0, 0, 0, 0);
@@ -560,12 +559,12 @@ void Get_Control_Data(void)
 		Limit_float(&Composite_V, 2.2f, 0.0f);
 		if(RoboControl_Struct.Controler == Joystick)
 		{
-			Steer_Angle_target = atan2f(Remote_Control_Struct.RC_Left_X, Remote_Control_Struct.RC_Left_Y) * Radain2Angle ;//+ RoboControl_Struct.Yaw_Err;//右上为+45°
+			Steer_Angle_target = atan2f(Remote.Left_X, Remote.Left_Y) * Radain2Angle ;//+ RoboControl_Struct.Yaw_Err;//右上为+45°
 		}
-		// else if(RoboControl_Struct.Controler == KeyboardMouse)
-		// {
-		// 	Steer_Angle_target = atan2f((Remote.Keyboard_D - Remote.Keyboard_A), (Remote.Keyboard_W - Remote.Keyboard_S)) * Radain2Angle ;
-		// }
+		else if(RoboControl_Struct.Controler == KeyboardMouse)
+		{
+			Steer_Angle_target = atan2f((Remote.Keyboard_D - Remote.Keyboard_A), (Remote.Keyboard_W - Remote.Keyboard_S)) * Radain2Angle ;
+		}
 		
 		// 判断是否超出 [-90, 90] 的半圆范围
 		if (fabsf(Steer_Angle_target) > 90.0f) 
@@ -1571,16 +1570,16 @@ void add_six_state(Chassis_Control_StructTypeDef *leg_yak4)
 	theta_L_dot_last = leg_yak4->State[2];
 	theta_R_dot_last = leg_yak4->State[8];
 	
-	leg_yak4->State[1] = -(leg_yak4->Left_Leg_Angle)*Angle2Radain     -  *(leg_yak4->state_lqr + 4);		//θ  左腿后摆 θ  为正 增大
-	leg_yak4->State[2] = -(leg_yak4->Left_Leg_Angle_dot)*Angle2Radain -  *(leg_yak4->state_lqr + 5);	    //θ’ 左腿后摆 θ’ 为正 增大
+	leg_yak4->State[1] = -(leg_yak4->Left_Leg_Angle)*Angle2Radain     -  *(leg_yak4->state_lqr + QB);		//θ  左腿后摆 θ  为正 增大
+	leg_yak4->State[2] = -(leg_yak4->Left_Leg_Angle_dot)*Angle2Radain -  *(leg_yak4->state_lqr + QB_D);	    //θ’ 左腿后摆 θ’ 为正 增大
 	
-	leg_yak4->State[7] = (leg_yak4->Right_Leg_Angle)*Angle2Radain     -  *(leg_yak4->state_lqr + 4);		//θ  右腿后摆 θ  为正 增大
-    leg_yak4->State[8] = (leg_yak4->Right_Leg_Angle_dot)*Angle2Radain -  *(leg_yak4->state_lqr + 5);		//θ’ 右腿后摆 θ’ 为正 增大
+	leg_yak4->State[7] = (leg_yak4->Right_Leg_Angle)*Angle2Radain     -  *(leg_yak4->state_lqr + QB);		//θ  右腿后摆 θ  为正 增大
+    leg_yak4->State[8] = (leg_yak4->Right_Leg_Angle_dot)*Angle2Radain -  *(leg_yak4->state_lqr + QB_D);		//θ’ 右腿后摆 θ’ 为正 增大
 
-    leg_yak4->State[3] = *(leg_yak4->state_lqr + 0);				//位移							
-    leg_yak4->State[4] = *(leg_yak4->state_lqr + 1);				//位移一阶导	
-    leg_yak4->State[5] = *(leg_yak4->state_lqr + 4);				//机体pitch       //翘头pitch增大
-    leg_yak4->State[6] = *(leg_yak4->state_lqr + 5);				//机体pitch一阶导	
+    leg_yak4->State[3] = *(leg_yak4->state_lqr + S);				//位移							
+    leg_yak4->State[4] = *(leg_yak4->state_lqr + S_D);				//位移一阶导	
+    leg_yak4->State[5] = *(leg_yak4->state_lqr + QB);				//机体pitch       //翘头pitch增大
+    leg_yak4->State[6] = *(leg_yak4->state_lqr + QB_D);				//机体pitch一阶导	
 	
 	theta_L_dot_dot = (leg_yak4->State[2] - theta_L_dot_last) / Chassis_dt;
 	theta_R_dot_dot = (leg_yak4->State[8] - theta_R_dot_last) / Chassis_dt;

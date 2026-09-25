@@ -64,100 +64,89 @@ void Chassis_Receive_attitude_Pack(uint8_t *Data)
 
 void Chassis_Receive_Remote_Pack1(uint8_t *Data)
 {
-	Remote_Control_Struct.Remote_GetData_Ticker = 0;
+	Remote.Remote_GetData_Ticker = 0;
 	IF_Chassis_Online = 1;
-    Remote_Control_Struct.If_Remote_Data_New = 1;
-	memcpy(&Remote_Control_Last_Struct, &Remote_Control_Struct, sizeof(Remote_Control_StructTypeDef));
+	Remote.If_Remote_Data_New = 1;
 	
 	memcpy(&Remote_Pack1, Data, sizeof(Remote_Pack1_TypedefStruct));
 	
-	// Remote_Last.Right_X				=Remote.Right_X				;
-	// Remote_Last.Right_Y				=Remote.Right_Y				;
-	// Remote_Last.Left_X				=Remote.Left_X				;
-	// Remote_Last.Left_Y				=Remote.Left_Y				;
-	// Remote_Last.Wheel				=Remote.Wheel				;
-	// Remote_Last.If_Remote_Connect	=Remote.If_Remote_Connect	;
-	// Remote_Last.Mode				=Remote.Mode				;
-	// Remote_Last.Pause				=Remote.Pause				;
-	// Remote_Last.Custom_L			=Remote.Custom_L			;
-	// Remote_Last.Custom_R			=Remote.Custom_R			;
-	// Remote_Last.Trigger				=Remote.Trigger				;
+	Remote_Last.Right_X				=Remote.Right_X				;
+	Remote_Last.Right_Y				=Remote.Right_Y				;
+	Remote_Last.Left_X				=Remote.Left_X				;
+	Remote_Last.Left_Y				=Remote.Left_Y				;
+	Remote_Last.Wheel				=Remote.Wheel				;
+	Remote_Last.If_Remote_Connect	=Remote.If_Remote_Connect	;
+	Remote_Last.Mode				=Remote.Mode				;
+	Remote_Last.Pause				=Remote.Pause				;
+	Remote_Last.Custom_L			=Remote.Custom_L			;
+	Remote_Last.Custom_R			=Remote.Custom_R			;
+	Remote_Last.Trigger				=Remote.Trigger				;
 	
-	// Remote.Right_X				= Remote_Pack1.Right_X	/127.0f		;					
-	// Remote.Right_Y				= Remote_Pack1.Right_Y	/127.0f		;			
-	// Remote.Left_X				= Remote_Pack1.Left_X	/127.0f		;			
-	// Remote.Left_Y				= Remote_Pack1.Left_Y	/127.0f		;					
-	// Remote.Wheel				= Remote_Pack1.Wheel	/127.0f		;				
-	// Remote.If_Remote_Connect	= Remote_Pack1.If_Remote_Connect	;
-	// Remote.Mode					= Remote_Pack1.Mode					;
-	// Remote.Pause				= Remote_Pack1.Pause				;
-	// Remote.Custom_L				= Remote_Pack1.Custom_L				;
-	// Remote.Custom_R				= Remote_Pack1.Custom_R				;
-	// Remote.Trigger				= Remote_Pack1.Trigger				;
-
-
-	Remote_Control_Struct.RC_Right_X		= Remote_Pack1.RC_Right_X/127.0f;
-	Remote_Control_Struct.RC_Right_Y		= Remote_Pack1.RC_Right_Y/127.0f;
-	Remote_Control_Struct.RC_Left_X			= Remote_Pack1.RC_Left_X/127.0f;
-	Remote_Control_Struct.RC_Left_Y			= Remote_Pack1.RC_Left_Y/127.0f;
-	Remote_Control_Struct.RC_Side			= Remote_Pack1.RC_Side/127.0f;
-	Remote_Control_Struct.If_Remote_Connect	= Remote_Pack1.If_Remote_Connect;
-	Remote_Control_Struct.S1				= Remote_Pack1.S1;
-	Remote_Control_Struct.S2				= Remote_Pack1.S2;
+	Remote.Right_X				= Remote_Pack1.Right_X	/127.0f		;					
+	Remote.Right_Y				= Remote_Pack1.Right_Y	/127.0f		;			
+	Remote.Left_X				= Remote_Pack1.Left_X	/127.0f		;			
+	Remote.Left_Y				= Remote_Pack1.Left_Y	/127.0f		;					
+	Remote.Wheel				= Remote_Pack1.Wheel	/127.0f		;				
+	Remote.If_Remote_Connect	= Remote_Pack1.If_Remote_Connect	;
+	Remote.Mode					= Remote_Pack1.Mode					;
+	Remote.Pause				= Remote_Pack1.Pause				;
+	Remote.Custom_L				= Remote_Pack1.Custom_L				;
+	Remote.Custom_R				= Remote_Pack1.Custom_R				;
+	Remote.Trigger				= Remote_Pack1.Trigger				;
 }
 
 void Chassis_Receive_Remote_Pack2(uint8_t *Data)
 {
-	// Remote.Remote_GetData_Ticker = 0;
-	// IF_Chassis_Online = 1;
+	Remote.Remote_GetData_Ticker = 0;
+	IF_Chassis_Online = 1;
 
-	// memcpy(&Remote_Pack2, Data, sizeof(Remote_Pack2_TypedefStruct));
+	memcpy(&Remote_Pack2, Data, sizeof(Remote_Pack2_TypedefStruct));
 
-	// Remote_Last.Mouse_Vx                =    Remote.Mouse_Vx        ;
-	// Remote_Last.Mouse_Vy                =    Remote.Mouse_Vy        ;
-	// Remote_Last.Mouse_Vz                =    Remote.Mouse_Vz        ;
-	// Remote_Last.Mouse_L                 =    Remote.Mouse_L         ;
-	// Remote_Last.Mouse_M                 =    Remote.Mouse_M         ;
-	// Remote_Last.Mouse_R                 =    Remote.Mouse_R         ;
-	// Remote_Last.Keyboard_W              =    Remote.Keyboard_W      ;
-	// Remote_Last.Keyboard_A              =    Remote.Keyboard_A      ;
-	// Remote_Last.Keyboard_S              =    Remote.Keyboard_S      ;
-	// Remote_Last.Keyboard_D              =    Remote.Keyboard_D      ;
-	// Remote_Last.Keyboard_Q              =    Remote.Keyboard_Q      ;
-	// Remote_Last.Keyboard_E              =    Remote.Keyboard_E      ;
-	// Remote_Last.Keyboard_Shift          =    Remote.Keyboard_Shift  ;
-	// Remote_Last.Keyboard_Ctrl           =    Remote.Keyboard_Ctrl   ;
-	// Remote_Last.Keyboard_R              =    Remote.Keyboard_R      ;
-	// Remote_Last.Keyboard_F              =    Remote.Keyboard_F      ;
-	// Remote_Last.Keyboard_G              =    Remote.Keyboard_G      ;
-	// Remote_Last.Keyboard_Z              =    Remote.Keyboard_Z      ;
-	// Remote_Last.Keyboard_X              =    Remote.Keyboard_X      ;
-	// Remote_Last.Keyboard_C              =    Remote.Keyboard_C      ;
-	// Remote_Last.Keyboard_V              =    Remote.Keyboard_V      ;
-	// Remote_Last.Keyboard_B              =    Remote.Keyboard_B      ;
+	Remote_Last.Mouse_Vx                =    Remote.Mouse_Vx        ;
+	Remote_Last.Mouse_Vy                =    Remote.Mouse_Vy        ;
+	Remote_Last.Mouse_Vz                =    Remote.Mouse_Vz        ;
+	Remote_Last.Mouse_L                 =    Remote.Mouse_L         ;
+	Remote_Last.Mouse_M                 =    Remote.Mouse_M         ;
+	Remote_Last.Mouse_R                 =    Remote.Mouse_R         ;
+	Remote_Last.Keyboard_W              =    Remote.Keyboard_W      ;
+	Remote_Last.Keyboard_A              =    Remote.Keyboard_A      ;
+	Remote_Last.Keyboard_S              =    Remote.Keyboard_S      ;
+	Remote_Last.Keyboard_D              =    Remote.Keyboard_D      ;
+	Remote_Last.Keyboard_Q              =    Remote.Keyboard_Q      ;
+	Remote_Last.Keyboard_E              =    Remote.Keyboard_E      ;
+	Remote_Last.Keyboard_Shift          =    Remote.Keyboard_Shift  ;
+	Remote_Last.Keyboard_Ctrl           =    Remote.Keyboard_Ctrl   ;
+	Remote_Last.Keyboard_R              =    Remote.Keyboard_R      ;
+	Remote_Last.Keyboard_F              =    Remote.Keyboard_F      ;
+	Remote_Last.Keyboard_G              =    Remote.Keyboard_G      ;
+	Remote_Last.Keyboard_Z              =    Remote.Keyboard_Z      ;
+	Remote_Last.Keyboard_X              =    Remote.Keyboard_X      ;
+	Remote_Last.Keyboard_C              =    Remote.Keyboard_C      ;
+	Remote_Last.Keyboard_V              =    Remote.Keyboard_V      ;
+	Remote_Last.Keyboard_B              =    Remote.Keyboard_B      ;
 	
-	// Remote.Mouse_Vx				= Remote_Pack2.Mouse_Vx	/127.0f		;
-	// Remote.Mouse_Vy				= Remote_Pack2.Mouse_Vy	/127.0f		;
-	// Remote.Mouse_Vz				= Remote_Pack2.Mouse_Vz	/127.0f		;
-	// Remote.Mouse_L				= Remote_Pack2.Mouse_L				;
-	// Remote.Mouse_M				= Remote_Pack2.Mouse_M				;
-	// Remote.Mouse_R				= Remote_Pack2.Mouse_R				;
-	// Remote.Keyboard_W			= Remote_Pack2.Keyboard_W			;
-	// Remote.Keyboard_A			= Remote_Pack2.Keyboard_A			;
-	// Remote.Keyboard_S			= Remote_Pack2.Keyboard_S			;
-	// Remote.Keyboard_D			= Remote_Pack2.Keyboard_D			;
-	// Remote.Keyboard_Q			= Remote_Pack2.Keyboard_Q			;
-	// Remote.Keyboard_E			= Remote_Pack2.Keyboard_E			;
-	// Remote.Keyboard_Shift		= Remote_Pack2.Keyboard_Shift		;
-	// Remote.Keyboard_Ctrl		= Remote_Pack2.Keyboard_Ctrl		;
-	// Remote.Keyboard_R			= Remote_Pack2.Keyboard_R			;
-	// Remote.Keyboard_F			= Remote_Pack2.Keyboard_F			;
-	// Remote.Keyboard_G			= Remote_Pack2.Keyboard_G			;
-	// Remote.Keyboard_Z			= Remote_Pack2.Keyboard_Z			;
-	// Remote.Keyboard_X			= Remote_Pack2.Keyboard_X			;
-	// Remote.Keyboard_C			= Remote_Pack2.Keyboard_C			;
-	// Remote.Keyboard_V			= Remote_Pack2.Keyboard_V			;
-	// Remote.Keyboard_B			= Remote_Pack2.Keyboard_B			;
+	Remote.Mouse_Vx				= Remote_Pack2.Mouse_Vx	/127.0f		;
+	Remote.Mouse_Vy				= Remote_Pack2.Mouse_Vy	/127.0f		;
+	Remote.Mouse_Vz				= Remote_Pack2.Mouse_Vz	/127.0f		;
+	Remote.Mouse_L				= Remote_Pack2.Mouse_L				;
+	Remote.Mouse_M				= Remote_Pack2.Mouse_M				;
+	Remote.Mouse_R				= Remote_Pack2.Mouse_R				;
+	Remote.Keyboard_W			= Remote_Pack2.Keyboard_W			;
+	Remote.Keyboard_A			= Remote_Pack2.Keyboard_A			;
+	Remote.Keyboard_S			= Remote_Pack2.Keyboard_S			;
+	Remote.Keyboard_D			= Remote_Pack2.Keyboard_D			;
+	Remote.Keyboard_Q			= Remote_Pack2.Keyboard_Q			;
+	Remote.Keyboard_E			= Remote_Pack2.Keyboard_E			;
+	Remote.Keyboard_Shift		= Remote_Pack2.Keyboard_Shift		;
+	Remote.Keyboard_Ctrl		= Remote_Pack2.Keyboard_Ctrl		;
+	Remote.Keyboard_R			= Remote_Pack2.Keyboard_R			;
+	Remote.Keyboard_F			= Remote_Pack2.Keyboard_F			;
+	Remote.Keyboard_G			= Remote_Pack2.Keyboard_G			;
+	Remote.Keyboard_Z			= Remote_Pack2.Keyboard_Z			;
+	Remote.Keyboard_X			= Remote_Pack2.Keyboard_X			;
+	Remote.Keyboard_C			= Remote_Pack2.Keyboard_C			;
+	Remote.Keyboard_V			= Remote_Pack2.Keyboard_V			;
+	Remote.Keyboard_B			= Remote_Pack2.Keyboard_B			;
 }
 
 void Chassis_Send_Referee_Unpack(void)

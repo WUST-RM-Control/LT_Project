@@ -31,8 +31,8 @@ void Communicate_Task(void *argument)
     {
 		Gimbal_Send_Remote_Pack1();
 		osDelay(5);
-		// Gimbal_Send_Remote_Pack2();
-		// osDelay(5);
+		Gimbal_Send_Remote_Pack2();
+		osDelay(5);
 		Gimbal_Send_attitude_Pack();
 		osDelay(5);
 	}
@@ -40,57 +40,48 @@ void Communicate_Task(void *argument)
 
 void Gimbal_Send_Remote_Pack1(void)
 {
-// 	Remote_Pack1.Right_X			= 127*Remote.Right_X			;
-// 	Remote_Pack1.Right_Y			= 127*Remote.Right_Y			;
-// 	Remote_Pack1.Left_X				= 127*Remote.Left_X				;
-// 	Remote_Pack1.Left_Y				= 127*Remote.Left_Y				;
-// 	Remote_Pack1.Wheel				= 127*Remote.Wheel				;
-// 	Remote_Pack1.If_Remote_Connect	= Remote.If_Remote_Connect	;
-// 	Remote_Pack1.Mode				= Remote.Mode				;
-// //	Remote_Pack1.Pause				= Remote.Pause				;
-// 	Remote_Pack1.Pause				= 0							;
-// 	Remote_Pack1.Custom_L			= Remote.Custom_L			;
-// 	Remote_Pack1.Custom_R			= Remote.Custom_R			;
-// 	Remote_Pack1.Trigger			= Remote.Trigger			;
-
-	Remote_Pack1.RC_Right_X			= 127*Remote_Control_Struct.RC_Right_X	;
-	Remote_Pack1.RC_Right_Y			= 127*Remote_Control_Struct.RC_Right_Y;
-	Remote_Pack1.RC_Left_X			= 127*Remote_Control_Struct.RC_Left_X;
-	Remote_Pack1.RC_Left_Y			= 127*Remote_Control_Struct.RC_Left_Y;
-	Remote_Pack1.RC_Side			= 127*Remote_Control_Struct.RC_Side;
-	Remote_Pack1.If_Remote_Connect	= Remote_Control_Struct.If_Remote_Connect;
-	Remote_Pack1.S1					=Remote_Control_Struct.S1;
-	Remote_Pack1.S2					=Remote_Control_Struct.S2;
+	Remote_Pack1.Right_X			= 127*Remote.Right_X			;
+	Remote_Pack1.Right_Y			= 127*Remote.Right_Y			;
+	Remote_Pack1.Left_X				= 127*Remote.Left_X				;
+	Remote_Pack1.Left_Y				= 127*Remote.Left_Y				;
+	Remote_Pack1.Wheel				= 127*Remote.Wheel				;
+	Remote_Pack1.If_Remote_Connect	= Remote.If_Remote_Connect	;
+	Remote_Pack1.Mode				= Remote.Mode				;
+//	Remote_Pack1.Pause				= Remote.Pause				;
+	Remote_Pack1.Pause				= 0							;
+	Remote_Pack1.Custom_L			= Remote.Custom_L			;
+	Remote_Pack1.Custom_R			= Remote.Custom_R			;
+	Remote_Pack1.Trigger			= Remote.Trigger			;
 	
 	CAN_Send_Data(&hfdcan3, 0x50, (uint8_t *)&Remote_Pack1);
 }
 
 void Gimbal_Send_Remote_Pack2(void)
 {
-//	Remote_Pack2.Mouse_Vx		= 127*Remote.Mouse_Vx		;
-//	Remote_Pack2.Mouse_Vy		= 127*Remote.Mouse_Vy		;
-//	Remote_Pack2.Mouse_Vz		= 127*Remote.Mouse_Vz		;
-//	Remote_Pack2.Mouse_L		= Remote.Mouse_L		;
-//	Remote_Pack2.Mouse_M		= Remote.Mouse_M		;
-//	Remote_Pack2.Mouse_R		= Remote.Mouse_R		;
-//	Remote_Pack2.Keyboard_W		= Remote.Keyboard_W		;
-//	Remote_Pack2.Keyboard_A		= Remote.Keyboard_A		;
-//	Remote_Pack2.Keyboard_S		= Remote.Keyboard_S		;
-//	Remote_Pack2.Keyboard_D		= Remote.Keyboard_D		;
-//	Remote_Pack2.Keyboard_Q		= Remote.Keyboard_Q		;
-//	Remote_Pack2.Keyboard_E		= Remote.Keyboard_E		;
-//	Remote_Pack2.Keyboard_Shift	= Remote.Keyboard_Shift	;
-//	Remote_Pack2.Keyboard_Ctrl	= Remote.Keyboard_Ctrl	;
-//	Remote_Pack2.Keyboard_R		= Remote.Keyboard_R		;
-//	Remote_Pack2.Keyboard_F		= Remote.Keyboard_F		;
-//	Remote_Pack2.Keyboard_G		= Remote.Keyboard_G		;
-//	Remote_Pack2.Keyboard_Z		= Remote.Keyboard_Z		;
-//	Remote_Pack2.Keyboard_X		= Remote.Keyboard_X		;
-//	Remote_Pack2.Keyboard_C		= Remote.Keyboard_C		;
-//	Remote_Pack2.Keyboard_V		= Remote.Keyboard_V		;
-//	Remote_Pack2.Keyboard_B		= Remote.Keyboard_B		;
-//	
-//	CAN_Send_Data(&hfdcan3, 0x51, (uint8_t *)&Remote_Pack2);
+	Remote_Pack2.Mouse_Vx		= 127*Remote.Mouse_Vx		;
+	Remote_Pack2.Mouse_Vy		= 127*Remote.Mouse_Vy		;
+	Remote_Pack2.Mouse_Vz		= 127*Remote.Mouse_Vz		;
+	Remote_Pack2.Mouse_L		= Remote.Mouse_L		;
+	Remote_Pack2.Mouse_M		= Remote.Mouse_M		;
+	Remote_Pack2.Mouse_R		= Remote.Mouse_R		;
+	Remote_Pack2.Keyboard_W		= Remote.Keyboard_W		;
+	Remote_Pack2.Keyboard_A		= Remote.Keyboard_A		;
+	Remote_Pack2.Keyboard_S		= Remote.Keyboard_S		;
+	Remote_Pack2.Keyboard_D		= Remote.Keyboard_D		;
+	Remote_Pack2.Keyboard_Q		= Remote.Keyboard_Q		;
+	Remote_Pack2.Keyboard_E		= Remote.Keyboard_E		;
+	Remote_Pack2.Keyboard_Shift	= Remote.Keyboard_Shift	;
+	Remote_Pack2.Keyboard_Ctrl	= Remote.Keyboard_Ctrl	;
+	Remote_Pack2.Keyboard_R		= Remote.Keyboard_R		;
+	Remote_Pack2.Keyboard_F		= Remote.Keyboard_F		;
+	Remote_Pack2.Keyboard_G		= Remote.Keyboard_G		;
+	Remote_Pack2.Keyboard_Z		= Remote.Keyboard_Z		;
+	Remote_Pack2.Keyboard_X		= Remote.Keyboard_X		;
+	Remote_Pack2.Keyboard_C		= Remote.Keyboard_C		;
+	Remote_Pack2.Keyboard_V		= Remote.Keyboard_V		;
+	Remote_Pack2.Keyboard_B		= Remote.Keyboard_B		;
+	
+	CAN_Send_Data(&hfdcan3, 0x51, (uint8_t *)&Remote_Pack2);
 }
 
 void Gimbal_Send_attitude_Pack(void)

@@ -175,11 +175,6 @@
           <WinNumber>1</WinNumber>
           <ItemText>Double_Board_Down_to_UP_Referee,0x0A</ItemText>
         </Ww>
-        <Ww>
-          <count>4</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>Remote_Control_Struct</ItemText>
-        </Ww>
       </WatchWindow1>
       <WatchWindow2>
         <Ww>

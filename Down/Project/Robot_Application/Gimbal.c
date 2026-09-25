@@ -108,15 +108,15 @@ void Gimbal_Task(void *argument)
           
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		/*===| 遥控器断连处理 |===*/
-        Remote_Control_Struct.Remote_GetData_Ticker++;
+        Remote.Remote_GetData_Ticker++;
 
-        if(Remote_Control_Struct.Remote_GetData_Ticker >= 500)
+        if(Remote.Remote_GetData_Ticker >= 500)
         {
-            Remote_Control_Struct.If_Remote_Connect = 0;
-            Remote_Control_Struct.Remote_GetData_Ticker = 500;
+            Remote.If_Remote_Connect = 0;
+            Remote.Remote_GetData_Ticker = 500;
         }
 
-        if(Remote_Control_Struct.If_Remote_Connect == 0)
+        if(Remote.If_Remote_Connect == 0)
         {
             Robo_Stop();
         }
@@ -157,11 +157,6 @@ void Gimbal_Task(void *argument)
 		if(Motor_Data_Struct[6].Ticker >= 100) Motor_Data_Struct[6].If_Online = 0; 
 		if(Motor_Data_Struct[6].Ticker >  110) Motor_Data_Struct[6].Ticker = 100;
 		
-        if(Motor_Data_Struct[5].If_Online == 0 && Motor_Data_Struct[6].If_Online == 0)
-        {
-            Robo_Stop();
-        }
-
 		/*===| 关节电机离线检测 |===*/
 		Motor_Data_Struct[1].Ticker++; 
 		if(Motor_Data_Struct[1].Ticker >= 100) Motor_Data_Struct[1].If_Online = 0; 

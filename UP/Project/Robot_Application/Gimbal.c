@@ -22,12 +22,12 @@ void Gimbal_Task(void *argument)
     /*===| 云台PID参数初始化 |===*/
 	
 	/*===| 正常模式下 |===*/
-	PID_Init(&Gimbal_Control_Struct.Pitch_Angle_PID_Struct, 	10,  0, 200,  0,  0,    100);
-    PID_Init(&Gimbal_Control_Struct.Pitch_Speed_PID_Struct, 	200, 3, 0,    300,  500, 25000);	
+	PID_Init(&Gimbal_Control_Struct.Pitch_Angle_PID_Struct, 	10,  0, 50,  0,  0,    100);
+    PID_Init(&Gimbal_Control_Struct.Pitch_Speed_PID_Struct, 	800, 3, 0,    150,  500, 25000);	
 	
 	//没锁yaw轴
-	PID_Init(&Gimbal_Control_Struct.Yaw_Angle_PID_Struct,   	25,  0, 30,  0,  0,    600);
-	PID_Init(&Gimbal_Control_Struct.Yaw_Speed_PID_Struct,   	350, 1, 0,    650, 2000, 25000);
+	PID_Init(&Gimbal_Control_Struct.Yaw_Angle_PID_Struct,   	20,  0, 40,  0,  0,    600);
+	PID_Init(&Gimbal_Control_Struct.Yaw_Speed_PID_Struct,   	500, 1, 0,    150, 2000, 25000);
 
 	//锁yaw轴
 	PID_Init(&Gimbal_Control_Struct.Yaw_Angle_Lock_PID_Struct,   5,  0, 50,  0,  0,    50);

@@ -23,23 +23,23 @@ void ErrorHandle_Task(void const * argument)
   for(;;)
   {
         /*===| 遥控器断连处理 |===*/
-        Remote_Control_Struct.Remote_GetData_Ticker++;
+        Remote.Remote_GetData_Ticker++;
 
-        if(Remote_Control_Struct.Remote_GetData_Ticker >= 500)
+        if(Remote.Remote_GetData_Ticker >= 500)
         {
-            Remote_Control_Struct.If_Remote_Connect = 0;
+            Remote.If_Remote_Connect = 0;
         }
-        if(Remote_Control_Struct.Remote_GetData_Ticker >= 3000)
+        if(Remote.Remote_GetData_Ticker >= 3000)
         {
-            Remote_Control_Struct.Remote_GetData_Ticker = 3000;
+            Remote.Remote_GetData_Ticker = 3000;
 //            HAL_NVIC_SystemReset();
         }
         
 
-        if(Remote_Control_Struct.If_Remote_Connect == 0)
+        if(Remote.If_Remote_Connect == 0)
         {
             Robo_Stop();
-            memset(&Remote_Control_Struct.Mouse_Speed_X, 0, 30);
+            memset(&Remote.Mouse_Vx, 0, 30);
         }
 
 		if(Board_Commnuicate_Error_Ticker >= 500)

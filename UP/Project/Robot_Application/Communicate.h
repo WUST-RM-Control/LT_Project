@@ -11,28 +11,19 @@
 
 typedef __packed struct
 {
-	// int8_t Right_X;
-	// int8_t Right_Y;
-	// int8_t Left_X;
-	// int8_t Left_Y;
-	// int8_t Wheel;
-	// uint8_t If_Remote_Connect:1;
-	// uint8_t Mode:2;
-	// uint8_t Pause:1;
-	// uint8_t Custom_L:1;
-	// uint8_t Custom_R:1;
-	// uint8_t Trigger:1;
-	// uint8_t null1:1;
-	// uint8_t null2;
-
-	uint8_t If_Remote_Connect;
-    int8_t RC_Right_X;
-	int8_t RC_Right_Y;
-	int8_t RC_Left_X;
-	int8_t RC_Left_Y;
-	int8_t RC_Side;
-	uint8_t S1;
-	uint8_t S2;
+	int8_t Right_X;
+	int8_t Right_Y;
+	int8_t Left_X;
+	int8_t Left_Y;
+	int8_t Wheel;
+	uint8_t If_Remote_Connect:1;
+	uint8_t Mode:2;
+	uint8_t Pause:1;
+	uint8_t Custom_L:1;
+	uint8_t Custom_R:1;
+	uint8_t Trigger:1;
+	uint8_t null1:1;
+	uint8_t null2;
 } Remote_Pack1_TypedefStruct;
 
 typedef __packed struct

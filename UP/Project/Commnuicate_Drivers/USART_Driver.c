@@ -16,7 +16,7 @@ uint8_t RS485_1_RX_Data[64]     = {0};
 uint8_t RS485_2_RX_Data[64]     = {0};
 uint8_t UART4_RX_Data[256]       = {0};
 uint8_t UART5_RX_Data[256]       = {0};
-uint8_t SBUS_RX_Data[128]        = {0};
+uint8_t SBUS_RX_Data[64]        = {0};
 
 /**
  * @brief USART接收空闲事件回调函数
@@ -49,7 +49,6 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 	}
     else if(huart == SBUS_UART)
 	{   
-		Remote_Control_Rx_CallBack(SBUS_RX_Data);
         HAL_UARTEx_ReceiveToIdle_DMA(SBUS_UART, SBUS_RX_Data, 64);
         __HAL_DMA_DISABLE_IT(SBUS_UART_DMA, DMA_IT_HT);
 	}

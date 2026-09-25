@@ -183,14 +183,14 @@ void StartDefaultTask(void const * argument)
         Get_TotalAngle_Speed(&Motor.Pitch, 0.3f);
         Get_TotalAngle_Speed(&Motor.Yaw, 0.5f);
 	  
-//      static uint8_t tick = 0;
-//      tick++;
-//      if(tick >= 10)
-//      {
-//          Remote_Save_Last_Data();
-//        
-//          tick = 0;
-//      }
+      static uint8_t tick = 0;
+      tick++;
+      if(tick >= 10)
+      {
+          Remote_Save_Last_Data();
+        
+          tick = 0;
+      }
       
         osDelay(5);
   }

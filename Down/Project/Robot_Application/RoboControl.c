@@ -52,36 +52,22 @@ void Robo_Task(void *argument)
     RoboControl_Struct.Shoot_State = Shoot_State_Off;
     RoboControl_Struct.Gimbal_State = Gimbal_State_Normal;
     RoboControl_Struct.Chassis_Speed_Level = 1;
-    RoboControl_Struct.SuperCap_State = 0;//平衡步兵默认上电开超电
+    RoboControl_Struct.SuperCap_State = 1;//平衡步兵默认上电开超电
     Referee_Data_Init();
     for(;;)
     {
         /*===| 如果遥控器连接 |===*/
-        if(Remote_Control_Struct.If_Remote_Connect)
+        if(Remote.If_Remote_Connect)
         {
-			/*===| 遥控方式选择 |===*/
-			/*===| 如果遥控器连接 |===*/
-			if(Remote_Control_Struct.If_Remote_Connect)
-			{
-				/*===| 右拨杆拨到最下面开启键盘控制，否则是遥控器控制 |===*/
-				if(Remote_Control_Struct.S1 != SW_Down && RoboControl_Struct.Robo_Enable == 0)
-				{
-					Robo_Restart();
-					RoboControl_Struct.Controler = Joystick;
-				}
-				else if(Remote_Control_Struct.S1 != SW_Down) 
-				{
-					RoboControl_Struct.Controler = Joystick;
-					RoboControl_Struct.Robo_Enable = 1;
-				}
-				else
-				{
-					RoboControl_Struct.Controler = none;
-					RoboControl_Struct.Robo_Enable = 0;
-					Robo_Stop();
-				} 
-			}
-		}
+            /*===| 选择控制模式：摇杆|键鼠|自定义控制器 |===*/
+            if     (Remote.Mode == Remote_Mode_C) RoboControl_Struct.Controler = Joystick;
+            else if(Remote.Mode == Remote_Mode_N && RoboControl_Struct.Controler != Customer) RoboControl_Struct.Controler = Joystick;
+            else if(Remote.Mode == Remote_Mode_S && RoboControl_Struct.Controler != Customer) RoboControl_Struct.Controler = KeyboardMouse;   
+            
+            /*===| 判断是否停机 |===*/     
+            if(Remote.Mode == Remote_Mode_C && RoboControl_Struct.Robo_Enable == 1) Robo_Stop();   
+            else if(Remote.Mode != Remote_Mode_C && RoboControl_Struct.Robo_Enable == 0 && RoboControl_Struct.Controler == Joystick) Robo_Restart(); 
+        }
         else
         {
             Robo_Stop(); 
@@ -92,19 +78,25 @@ void Robo_Task(void *argument)
         if(RoboControl_Struct.Controler == Joystick)
         {
             RemoteControl_Float();
-            // if(Remote_Control_Struct.If_Remote_Data_New == 1 && Remote_Control_Last_Struct.If_Remote_Data_New == 1)
-            if(Remote_Control_Struct.If_Remote_Data_New == 1)
+            if(Remote.If_Remote_Data_New == 1)
             {
 //                if(Remote_ReleaseSingle_Pause) RoboControl_Struct.Controler = Customer;
                 RemoteControl_Bool();
-                Remote_Control_Struct.If_Remote_Data_New = 0; 
-                Remote_Control_Last_Struct.If_Remote_Data_New =0;
             }
-        }   
-        if(RoboControl_Struct.Robo_Enable == 0&&Remote_Control_Struct.S2==SW_Down)
-		{
-			Chassis_Control_Struct.Smooth_restand_Flag = 1;
-		}
+        }
+        /*===| 遥控器键鼠控制 |===*/
+        else if(RoboControl_Struct.Controler == KeyboardMouse)
+        {
+            KeyControl_Float();
+            if(Remote.If_Remote_Data_New == 1)
+            {
+//                if(Remote_ReleaseSingle_B) RoboControl_Struct.Controler = Customer; 
+                KeyControl_Bool();
+            }
+        }
+       
+        Remote.If_Remote_Data_New = 0;      
+        
         /*===| 控制参数限幅 |===*/              
 		Limit_float(&RoboControl_Struct.Robo_Target_Gimbal_Pitch, 27, -20);
 		Limit_float(&RoboControl_Struct.Leg_Length,0.38f,0.15f);
@@ -131,17 +123,17 @@ void Robo_Task(void *argument)
 			IF_Chassis_Online = 0;
         }	
 
-        if(Remote_Control_Struct.If_Remote_Connect == 0 && IF_Chassis_Online == 0)
+        if(Remote.If_Remote_Connect == 0 && IF_Chassis_Online == 0)
         {
             Robo_Stop();
-            memset(&Remote_Control_Struct.Mouse_Speed_X, 0, 30);
+            memset(&Remote_Last.Mouse_Vx, 0, 30);
         }
 		
-//		//电管底盘失能 机器人也失能 防止重使能关节乱动
-//		if(Robo_State.power_management_chassis_output == 0)
-//		{
-//			Robo_Stop();
-//		}
+		//电管底盘失能 机器人也失能 防止重使能关节乱动
+		if(Robo_State.power_management_chassis_output == 0)
+		{
+			Robo_Stop();
+		}
 		
 		osDelay(1);
 	} 
@@ -236,25 +228,25 @@ void RemoteControl_Float(void)
    static uint32_t Remote_DWT_Count;
    float Dt = DWT_GetDeltaT(&Remote_DWT_Count);
     
-   if(Remote_Control_Struct.S1 != SW_Down)
+   if(Remote_Mode_N)
    {
 		/*===| 底盘运动控制 |===*/
 		switch(RoboControl_Struct.Chassis_Speed_Level)
 		{
 			case 1:
-				RoboControl_Struct.Robo_Target_Vy = 1.4f * (Remote_Control_Struct.RC_Left_Y);
+				RoboControl_Struct.Robo_Target_Vy = 1.4f * (Remote.Left_Y);
 				break; 
 			case 2:
-				RoboControl_Struct.Robo_Target_Vy = 1.7f * (Remote_Control_Struct.RC_Left_Y);
+				RoboControl_Struct.Robo_Target_Vy = 1.7f * (Remote.Left_Y);
 				break;
 			case 3:
-				RoboControl_Struct.Robo_Target_Vy = 2.0f  * (Remote_Control_Struct.RC_Left_Y);
+				RoboControl_Struct.Robo_Target_Vy = 2.0f  * (Remote.Left_Y);
 				break;                              
 			case 4:                                 
-				RoboControl_Struct.Robo_Target_Vy = 2.15f * (Remote_Control_Struct.RC_Left_Y);
+				RoboControl_Struct.Robo_Target_Vy = 2.15f * (Remote.Left_Y);
 				break;                              
 			case 5:                                 
-				RoboControl_Struct.Robo_Target_Vy = 2.30f * (Remote_Control_Struct.RC_Left_Y);
+				RoboControl_Struct.Robo_Target_Vy = 2.30f * (Remote.Left_Y);
 				break;
 		}
   
@@ -266,19 +258,19 @@ void RemoteControl_Float(void)
 		   switch(RoboControl_Struct.Chassis_Speed_Level)
 			{
 				case 1:
-					RoboControl_Struct.Robo_Target_Vx = 1.4f * (Remote_Control_Struct.RC_Left_X);
+					RoboControl_Struct.Robo_Target_Vx = 1.4f * (Remote.Left_X);
 					break;                              
 				case 2:                                 
-					RoboControl_Struct.Robo_Target_Vx = 1.7f * (Remote_Control_Struct.RC_Left_X);
+					RoboControl_Struct.Robo_Target_Vx = 1.7f * (Remote.Left_X);
 					break;                              
 				case 3:                                 
-					RoboControl_Struct.Robo_Target_Vx = 2.0f * (Remote_Control_Struct.RC_Left_X);
+					RoboControl_Struct.Robo_Target_Vx = 2.0f * (Remote.Left_X);
 					break;                              
 				case 4:                                 
-					RoboControl_Struct.Robo_Target_Vx = 2.15f * (Remote_Control_Struct.RC_Left_X);
+					RoboControl_Struct.Robo_Target_Vx = 2.15f * (Remote.Left_X);
 					break;                              
 				case 5:                                 
-					RoboControl_Struct.Robo_Target_Vx = 2.30f * (Remote_Control_Struct.RC_Left_X);
+					RoboControl_Struct.Robo_Target_Vx = 2.30f * (Remote.Left_X);
 					break;
 			}  
 			
@@ -292,41 +284,41 @@ void RemoteControl_Bool(void)
 	static uint32_t Remote_DWT_Count;
     float Dt = DWT_GetDeltaT(&Remote_DWT_Count);
 	
-		// /*===| 滑键滑至C模式关闭所有设备 |===*/     
-        // if(Remote.Mode == Remote_Mode_C && RoboControl_Struct.Robo_Enable == 1) Robo_Stop();
+		/*===| 滑键滑至C模式关闭所有设备 |===*/     
+        if(Remote.Mode == Remote_Mode_C && RoboControl_Struct.Robo_Enable == 1) Robo_Stop();
         
-        // /*===| 重启设备 |===*/     
-        // else if(Remote.Mode == Remote_Mode_N && RoboControl_Struct.Robo_Enable == 0) Robo_Restart();
+        /*===| 重启设备 |===*/     
+        else if(Remote.Mode == Remote_Mode_N && RoboControl_Struct.Robo_Enable == 0) Robo_Restart();
 		
-		if((RoboControl_Struct.Robo_Enable == 1) && Remote_Control_Struct.RC_Side > 0.7f)
+		if((RoboControl_Struct.Robo_Enable == 1) && Remote.Wheel > 0.7f)
 		{
-			RoboControl_Struct.Leg_Length += 0.16f * Remote_Control_Struct.RC_Right_Y * Dt;//控制腿长
-			RoboControl_Struct.Leg_Angle  += 10.0f * Remote_Control_Struct.RC_Right_X * Dt;//板凳状态下控制摆角
+			RoboControl_Struct.Leg_Length += 0.16f * Remote.Right_Y * Dt;//控制腿长
+			RoboControl_Struct.Leg_Angle  += 10.0f * Remote.Right_X * Dt;//板凳状态下控制摆角
 			 
 			/*===| 自定义功能-左摇杆向右 |===*/
-            if(Remote_Control_Struct.RC_Left_X > 0.8f && Remote_Control_Last_Struct.RC_Left_X < 0.8f)
+            if(Remote.Left_X > 0.8f && Remote_Last.Left_X < 0.8f)
             {
-				// /*===| 底盘跟随模式 |===*/
-                // RoboControl_Struct.Chassis_State = Chassis_FOLLOW;
+				/*===| 底盘跟随模式 |===*/
+                RoboControl_Struct.Chassis_State = Chassis_FOLLOW;
             }
             /*===| 自定义功能-左摇杆向左 |===*/
-            else if (Remote_Control_Struct.RC_Left_X < -0.8f && Remote_Control_Last_Struct.RC_Left_X > -0.8f)
+            else if (Remote.Left_X < -0.8f && Remote_Last.Left_X > -0.8f)
             {
-				// /*===| 底盘静止模式 |===*/
-                // RoboControl_Struct.Chassis_State = Chassis_STATIC;
+				/*===| 底盘静止模式 |===*/
+                RoboControl_Struct.Chassis_State = Chassis_STATIC;
             }
             /*===| 自定义功能-左摇杆向上 |===*/
-            if      (Remote_Control_Struct.RC_Left_Y > 0.8f && Remote_Control_Last_Struct.RC_Left_Y < 0.8f)
+            if      (Remote.Left_Y > 0.8f && Remote_Last.Left_Y < 0.8f)
             {
 
             }
             /*===| 自定义功能-左摇杆向下 |===*/
-            else if (Remote_Control_Struct.RC_Left_Y < -0.8f && Remote_Control_Last_Struct.RC_Left_Y > -0.8f)
+            else if (Remote.Left_Y < -0.8f && Remote_Last.Left_Y > -0.8f)
             {
 
             }
             /*===| 自定义功能- 右摇杆向右 |===*/
-            if      (Remote_Control_Struct.RC_Right_X > 0.8f && Remote_Control_Last_Struct.RC_Right_X < 0.8f)
+            if      (Remote.Right_X > 0.8f && Remote_Last.Right_X < 0.8f)
             {
 				/*===| 速度等级+1 |===*/
                 RoboControl_Struct.Chassis_Speed_Level += 1;
@@ -335,7 +327,7 @@ void RemoteControl_Bool(void)
 				if(Chassis_Control_Struct.Jump_Level > 3) Chassis_Control_Struct.Jump_Level = 3;
             }
             /*===| 自定义功能- 右摇杆向左 |===*/
-            else if (Remote_Control_Struct.RC_Right_X < -0.8f && Remote_Control_Last_Struct.RC_Right_X > -0.8f)
+            else if (Remote.Right_X < -0.8f && Remote_Last.Right_X > -0.8f)
             {
 				/*===| 速度等级-1 |===*/
                 RoboControl_Struct.Chassis_Speed_Level -= 1;
@@ -344,14 +336,14 @@ void RemoteControl_Bool(void)
 				if(Chassis_Control_Struct.Jump_Level < 1) Chassis_Control_Struct.Jump_Level = 1;
             }
             /*===| 自定义功能-右摇杆向上 |===*/
-            if      (Remote_Control_Struct.RC_Right_Y > 0.8f && Remote_Control_Last_Struct.RC_Right_Y < 0.8f)
+            if      (Remote.Right_Y > 0.8f && Remote_Last.Right_Y < 0.8f)
             {
                 /*===| 开超电 |===*/
-                RoboControl_Struct.SuperCap_State = 0;
-                Buzzer_Set_SoundEffect(Buzzer_SoundEffect_SuperCap_OFF);
+                RoboControl_Struct.SuperCap_State = 1;
+                Buzzer_Set_SoundEffect(Buzzer_SoundEffect_SuperCap_ON);
             }
             /*===| 自定义功能-右摇杆向下 |===*/
-            else if (Remote_Control_Struct.RC_Right_Y < -0.8f && Remote_Control_Last_Struct.RC_Right_Y > -0.8f)
+            else if (Remote.Right_Y < -0.8f && Remote_Last.Right_Y > -0.8f)
             {
                 /*===| 关超电 |===*/
                 RoboControl_Struct.SuperCap_State = 0;
@@ -359,71 +351,68 @@ void RemoteControl_Bool(void)
             }
 		}
 		 
-		else if(Remote_Control_Struct.RC_Side < -0.7f)
+		else if(Remote.Wheel < -0.7f)
 		{
 			 /*===| 自定义功能-左摇杆向右 |===*/
-            if(Remote_Control_Struct.RC_Left_X > 0.8f && Remote_Control_Last_Struct.RC_Left_X < 0.8f)
+            if(Remote.Left_X > 0.8f && Remote_Last.Left_X < 0.8f)
             {
 
             }
             /*===| 自定义功能-左摇杆向左 |===*/
-            else if (Remote_Control_Struct.RC_Left_X < -0.8f && Remote_Control_Last_Struct.RC_Left_X > -0.8f)
+            else if (Remote.Left_X < -0.8f && Remote_Last.Left_X > -0.8f)
             {
-				// //手动清零部分功能标志位 避免疯车
-				// Chassis_Control_Struct.Recover_from_ground_Flag = 0;
-				// Chassis_Control_Struct.Jump_Flag = 0;
-				// Chassis_Control_Struct.UpStep_Dect_Flag = 0;
-				// Chassis_Control_Struct.UpStep_Flag = 0;
+				//手动清零部分功能标志位 避免疯车
+				Chassis_Control_Struct.Recover_from_ground_Flag = 0;
+				Chassis_Control_Struct.Jump_Flag = 0;
+				Chassis_Control_Struct.UpStep_Dect_Flag = 0;
+				Chassis_Control_Struct.UpStep_Flag = 0;
             }
             /*===| 自定义功能-左摇杆向上 |===*/
-            if      (Remote_Control_Struct.RC_Left_Y > 0.8f && Remote_Control_Last_Struct.RC_Left_Y < 0.8f)
+            if      (Remote.Left_Y > 0.8f && Remote_Last.Left_Y < 0.8f)
             {
-				// RoboControl_Struct.If_SettingZero = 1;//设零点
+				RoboControl_Struct.If_SettingZero = 1;//设零点
             }
             /*===| 自定义功能-左摇杆向下 |===*/
-            else if (Remote_Control_Struct.RC_Left_Y < -0.8f && Remote_Control_Last_Struct.RC_Left_Y > -0.8f)
+            else if (Remote.Left_Y < -0.8f && Remote_Last.Left_Y > -0.8f)
             {
-				// Chassis_Control_Struct.Recover_from_ground_Flag = 1;//翻倒自起功能
+				Chassis_Control_Struct.Recover_from_ground_Flag = 1;//翻倒自起功能
             }
             /*===| 自定义功能-滑轮下滑 右摇杆向右 |===*/
-            if      (Remote_Control_Struct.RC_Right_X > 0.8f && Remote_Control_Last_Struct.RC_Right_X < 0.8f)
+            if      (Remote.Right_X > 0.8f && Remote_Last.Right_X < 0.8f)
             {
-				// Chassis_Control_Struct.Jump_Flag = 1;//机器人跳跃功能
+				Chassis_Control_Struct.Jump_Flag = 1;//机器人跳跃功能
             }
             /*===| 自定义功能-滑轮下滑 右摇杆向左 |===*/
-            else if (Remote_Control_Struct.RC_Right_X < -0.8f && Remote_Control_Last_Struct.RC_Right_X > -0.8f)
+            else if (Remote.Right_X < -0.8f && Remote_Last.Right_X > -0.8f)
             {
-				// Chassis_Control_Struct.UpStep_Dect_Flag = 1;//机器人上台阶磕碰检测标志位
-				// Buzzer_Set_SoundEffect(Buzzer_SoundEffect_Aim_ON);
+				Chassis_Control_Struct.UpStep_Dect_Flag = 1;//机器人上台阶磕碰检测标志位
+				Buzzer_Set_SoundEffect(Buzzer_SoundEffect_Aim_ON);
             }
             /*===| 自定义功能-右摇杆向上 |===*/
-            if      (Remote_Control_Struct.RC_Right_Y > 0.8f && Remote_Control_Last_Struct.RC_Right_Y < 0.8f)
+            if      (Remote.Right_Y > 0.8f && Remote_Last.Right_Y < 0.8f)
             {
 				
             }
             /*===| 自定义功能-右摇杆向下 |===*/
-            else if (Remote_Control_Struct.RC_Right_Y < -0.8f && Remote_Control_Last_Struct.RC_Right_Y > -0.8f)
+            else if (Remote.Right_Y < -0.8f && Remote_Last.Right_Y > -0.8f)
             {
-                // Chassis_Control_Struct.Up_Slope_Mode_Flag = 0;
+                Chassis_Control_Struct.Up_Slope_Mode_Flag = 0;
             }
 		}
-		 /*===| 开启小陀螺 |===*/
-        if(Remote_Control_Struct.S1 == SW_Up) 
-		{
-			if(RoboControl_Struct.Chassis_State != Chassis_SPIN)
-			{
-				INS_Data_Self.Yaw_Round = 0;
-				Steer_Total_angle_Target = 0;
-			}
-			RoboControl_Struct.Chassis_State = Chassis_SPIN;
-		}
-		else
-		{
-			if(RoboControl_Struct.Chassis_State == Chassis_SPIN)
-			{
-				RoboControl_Struct.Chassis_State = Chassis_STATIC;
-				/*===| 每次关闭小陀螺反向 |===*/
-				if (fabsf(RoboControl_Struct.Yaw_Err)<90.0f)
+		 
+        /*===| 左按键开启小陀螺 |===*/
+        if(Remote_PressSingle_Custom_L) 
+        {			
+            if(RoboControl_Struct.Chassis_State != Chassis_SPIN)
+            {
+                RoboControl_Struct.Chassis_State = Chassis_SPIN;
+            }
+            
+            /*===| 再次按左键 关闭小陀螺 并让下次小陀螺时反转 |===*/
+            else if(RoboControl_Struct.Chassis_State == Chassis_SPIN)
+            {
+                RoboControl_Struct.Chassis_State = Chassis_STATIC;        //底盘跟随
+				if(fabsf(RoboControl_Struct.Yaw_Err)<90.0f)
 				{
 					Chassis_Control_Struct.Chassis_Forward_Change_Flag = 0;
 				}
@@ -431,259 +420,266 @@ void RemoteControl_Bool(void)
 				{
 					Chassis_Control_Struct.Chassis_Forward_Change_Flag = 1;
 				}
-				RoboControl_Struct.SPIN_Direction_Flag = !RoboControl_Struct.SPIN_Direction_Flag;
-				INS_Data_Self.Yaw_Round = 0;
-				Steer_Total_angle_Target = 0;
-			}
+                RoboControl_Struct.SPIN_Direction_Flag = !RoboControl_Struct.SPIN_Direction_Flag;
+            }     
 			
+			INS_Data_Self.Yaw_Round = 0;
+			Steer_Total_angle_Target = 0;
+        }
+				
+        /*===| 右键全功能按键*/
+        if (RoboControl_Struct.Robo_Enable == 1 && Remote_PressSingle_Custom_R)
+        {
+//            Chassis_Control_Struct.UpStep_Flag = 1;
+			Chassis_Control_Struct.Jump_Flag = 1;//机器人跳跃功能
+        }    
+		else if(RoboControl_Struct.Robo_Enable == 0 && Remote_PressSingle_Custom_R)
+		{
+			Chassis_Control_Struct.Smooth_restand_Flag = 1;
 		}
-//		if(RoboControl_Struct.Robo_Enable == 0&&Remote_Control_Struct.S2==SW_Down)
-//		{
-//			Chassis_Control_Struct.Smooth_restand_Flag = 1;
-//		}
 } 
 
 
-// /**
-//  * @brief 键盘控制
-//  */
-// void KeyControl_Float(void)
-// {
-//     static uint32_t Key_DWT_Count;
-//     float Dt = DWT_GetDeltaT(&Key_DWT_Count);
+/**
+ * @brief 键盘控制
+ */
+void KeyControl_Float(void)
+{
+    static uint32_t Key_DWT_Count;
+    float Dt = DWT_GetDeltaT(&Key_DWT_Count);
     
-//     /*===| 键盘控制Pitch错误值过滤 |===*/
-//     if(fabs(Remote.Mouse_Vy - Remote_Control_Last_Struct.Mouse_Vy) > 3.6f)
-//     {
-//         Remote.Mouse_Vy = 0;
-//     }  
+    /*===| 键盘控制Pitch错误值过滤 |===*/
+    if(fabs(Remote.Mouse_Vy - Remote_Last.Mouse_Vy) > 3.6f)
+    {
+        Remote.Mouse_Vy = 0;
+    }  
 	
-// 	if(Remote.Mouse_Vz>0.5f)//鼠标滚轮控制跳跃等级
-// 	{
-// 		Chassis_Control_Struct.Jump_Level = 1;
-// 	}
-// 	else if(Remote.Mouse_Vz<-0.5f)
-// 	{
-// 		Chassis_Control_Struct.Jump_Level = 2;
-// 	}
+	if(Remote.Mouse_Vz>0.5f)//鼠标滚轮控制跳跃等级
+	{
+		Chassis_Control_Struct.Jump_Level = 1;
+	}
+	else if(Remote.Mouse_Vz<-0.5f)
+	{
+		Chassis_Control_Struct.Jump_Level = 2;
+	}
 
-// 	switch(RoboControl_Struct.Chassis_Speed_Level)
-// 		{
-// 			case 1:
-// 				RoboControl_Struct.Robo_Target_Vy = 1.4f * (Remote.Keyboard_W - Remote.Keyboard_S);
-// 				break;                              
-// 			case 2:                                 
-// 				RoboControl_Struct.Robo_Target_Vy = 1.7f * (Remote.Keyboard_W - Remote.Keyboard_S);
-// 				break;                              
-// 			case 3:                                 
-// 				RoboControl_Struct.Robo_Target_Vy = 2.0f * (Remote.Keyboard_W - Remote.Keyboard_S);
-// 				break;                              
-// 			case 4:                                 
-// 				RoboControl_Struct.Robo_Target_Vy = 2.15f * (Remote.Keyboard_W - Remote.Keyboard_S);
-// 				break;                              
-// 			case 5:                                 
-// 				RoboControl_Struct.Robo_Target_Vy = 2.30f * (Remote.Keyboard_W - Remote.Keyboard_S);
-// 				break;
-// 		}
+	switch(RoboControl_Struct.Chassis_Speed_Level)
+		{
+			case 1:
+				RoboControl_Struct.Robo_Target_Vy = 1.4f * (Remote.Keyboard_W - Remote.Keyboard_S);
+				break;                              
+			case 2:                                 
+				RoboControl_Struct.Robo_Target_Vy = 1.7f * (Remote.Keyboard_W - Remote.Keyboard_S);
+				break;                              
+			case 3:                                 
+				RoboControl_Struct.Robo_Target_Vy = 2.0f * (Remote.Keyboard_W - Remote.Keyboard_S);
+				break;                              
+			case 4:                                 
+				RoboControl_Struct.Robo_Target_Vy = 2.15f * (Remote.Keyboard_W - Remote.Keyboard_S);
+				break;                              
+			case 5:                                 
+				RoboControl_Struct.Robo_Target_Vy = 2.30f * (Remote.Keyboard_W - Remote.Keyboard_S);
+				break;
+		}
 	
-// 	RoboControl_Struct.Robo_Target_Wz = RoboControl_Struct.Robo_Target_Wz;
+	RoboControl_Struct.Robo_Target_Wz = RoboControl_Struct.Robo_Target_Wz;
 		
-// 	/*===| 底盘静止状态下 以云台为正方向 左摇杆直接控制底盘全向移动 先转向再前进 与云台控制解耦 |===*/
-//     if(RoboControl_Struct.Chassis_State == Chassis_STATIC || RoboControl_Struct.Chassis_State == Chassis_SPIN)
-//     {
-// 	    switch(RoboControl_Struct.Chassis_Speed_Level)
-// 		{
-// 			case 1:
-// 				RoboControl_Struct.Robo_Target_Vx = 1.4f * (Remote.Keyboard_D - Remote.Keyboard_A);
-// 				break;                              
-// 			case 2:                                 
-// 				RoboControl_Struct.Robo_Target_Vx = 1.7f * (Remote.Keyboard_D - Remote.Keyboard_A);
-// 				break;                              
-// 			case 3:                                 
-// 				RoboControl_Struct.Robo_Target_Vx = 2.0f * (Remote.Keyboard_D - Remote.Keyboard_A);
-// 				break;                              
-// 			case 4:                                 
-// 				RoboControl_Struct.Robo_Target_Vx = 2.15f * (Remote.Keyboard_D - Remote.Keyboard_A);
-// 				break;                              
-// 			case 5:                                 
-// 				RoboControl_Struct.Robo_Target_Vx = 2.30f * (Remote.Keyboard_D - Remote.Keyboard_A);
-// 				break;
-// 		}
+	/*===| 底盘静止状态下 以云台为正方向 左摇杆直接控制底盘全向移动 先转向再前进 与云台控制解耦 |===*/
+    if(RoboControl_Struct.Chassis_State == Chassis_STATIC || RoboControl_Struct.Chassis_State == Chassis_SPIN)
+    {
+	    switch(RoboControl_Struct.Chassis_Speed_Level)
+		{
+			case 1:
+				RoboControl_Struct.Robo_Target_Vx = 1.4f * (Remote.Keyboard_D - Remote.Keyboard_A);
+				break;                              
+			case 2:                                 
+				RoboControl_Struct.Robo_Target_Vx = 1.7f * (Remote.Keyboard_D - Remote.Keyboard_A);
+				break;                              
+			case 3:                                 
+				RoboControl_Struct.Robo_Target_Vx = 2.0f * (Remote.Keyboard_D - Remote.Keyboard_A);
+				break;                              
+			case 4:                                 
+				RoboControl_Struct.Robo_Target_Vx = 2.15f * (Remote.Keyboard_D - Remote.Keyboard_A);
+				break;                              
+			case 5:                                 
+				RoboControl_Struct.Robo_Target_Vx = 2.30f * (Remote.Keyboard_D - Remote.Keyboard_A);
+				break;
+		}
 		
-// 		Limit_float(&RoboControl_Struct.Robo_Target_Vx, 1.8f, -1.8f); 
-//     }
-// }
+		Limit_float(&RoboControl_Struct.Robo_Target_Vx, 1.8f, -1.8f); 
+    }
+}
 
-// void KeyControl_Bool(void) 
-// {	
-// 	static uint32_t Key_DWT_Count;
-// 	float Dt = DWT_GetDeltaT(&Key_DWT_Count);
+void KeyControl_Bool(void) 
+{	
+	static uint32_t Key_DWT_Count;
+	float Dt = DWT_GetDeltaT(&Key_DWT_Count);
 	
-//     /*===| 按住C进入上台阶检测模式 |===*/
-// 		if(Remote_Press_C)
-// 		{
-// 			Chassis_Control_Struct.UpStep_Dect_Flag = 1;//机器人上台阶磕碰检测标志位
-// 			Buzzer_Set_SoundEffect(Buzzer_SoundEffect_Aim_ON);
-// 		}
-// 		else if(Remote_ReleaseSingle_C)
-// 		{
-// 			Chassis_Control_Struct.UpStep_Dect_Flag = 0;
-// 		}
+    /*===| 按住C进入上台阶检测模式 |===*/
+		if(Remote_Press_C)
+		{
+			Chassis_Control_Struct.UpStep_Dect_Flag = 1;//机器人上台阶磕碰检测标志位
+			Buzzer_Set_SoundEffect(Buzzer_SoundEffect_Aim_ON);
+		}
+		else if(Remote_ReleaseSingle_C)
+		{
+			Chassis_Control_Struct.UpStep_Dect_Flag = 0;
+		}
     
-// 		/*===| 按Q降腿长 按E升腿长 |===*/
-// 		if(!Remote_Press_Ctrl && Remote_PressSingle_E)
-// 		{
-// 			Chassis_Control_Struct.Leg_length_Level ++ ;
-// 			if(Chassis_Control_Struct.Leg_length_Level > 5)
-// 			{
-// 				Chassis_Control_Struct.Leg_length_Level = 5;
-// 			}
-// 			switch(Chassis_Control_Struct.Leg_length_Level)
-// 			{
-// 				case 1:
-// 					RoboControl_Struct.Leg_Length = 0.15f;
-// 					break; 
-// 				case 2:
-// 					RoboControl_Struct.Leg_Length = 0.21f; 
-// 					break;
-// 				case 3:
-// 					RoboControl_Struct.Leg_Length = 0.25f;
-// 					break;
-// 				case 4:
-// 					RoboControl_Struct.Leg_Length = 0.30f;
-// 					break;
-// 				case 5:
-// 					RoboControl_Struct.Leg_Length = 0.35f;
-// 					break;
-// 			}
-// 		}
-// 		if(!Remote_Press_Ctrl && Remote_PressSingle_Q)
-// 		{
-// 			Chassis_Control_Struct.Leg_length_Level -- ;
-// 			if(Chassis_Control_Struct.Leg_length_Level < 1)
-// 			{
-// 				Chassis_Control_Struct.Leg_length_Level = 1;
-// 			}
-// 			switch(Chassis_Control_Struct.Leg_length_Level)
-// 			{
-// 				case 1:
-// 					RoboControl_Struct.Leg_Length = 0.15f;
-// 					break; 
-// 				case 2:
-// 					RoboControl_Struct.Leg_Length = 0.21f; 
-// 					break;
-// 				case 3:
-// 					RoboControl_Struct.Leg_Length = 0.25f;
-// 					break;
-// 				case 4:
-// 					RoboControl_Struct.Leg_Length = 0.30f;
-// 					break;
-// 				case 5:
-// 					RoboControl_Struct.Leg_Length = 0.35f;
-// 					break;
-// 			}
-// 		}
+		/*===| 按Q降腿长 按E升腿长 |===*/
+		if(!Remote_Press_Ctrl && Remote_PressSingle_E)
+		{
+			Chassis_Control_Struct.Leg_length_Level ++ ;
+			if(Chassis_Control_Struct.Leg_length_Level > 5)
+			{
+				Chassis_Control_Struct.Leg_length_Level = 5;
+			}
+			switch(Chassis_Control_Struct.Leg_length_Level)
+			{
+				case 1:
+					RoboControl_Struct.Leg_Length = 0.15f;
+					break; 
+				case 2:
+					RoboControl_Struct.Leg_Length = 0.21f; 
+					break;
+				case 3:
+					RoboControl_Struct.Leg_Length = 0.25f;
+					break;
+				case 4:
+					RoboControl_Struct.Leg_Length = 0.30f;
+					break;
+				case 5:
+					RoboControl_Struct.Leg_Length = 0.35f;
+					break;
+			}
+		}
+		if(!Remote_Press_Ctrl && Remote_PressSingle_Q)
+		{
+			Chassis_Control_Struct.Leg_length_Level -- ;
+			if(Chassis_Control_Struct.Leg_length_Level < 1)
+			{
+				Chassis_Control_Struct.Leg_length_Level = 1;
+			}
+			switch(Chassis_Control_Struct.Leg_length_Level)
+			{
+				case 1:
+					RoboControl_Struct.Leg_Length = 0.15f;
+					break; 
+				case 2:
+					RoboControl_Struct.Leg_Length = 0.21f; 
+					break;
+				case 3:
+					RoboControl_Struct.Leg_Length = 0.25f;
+					break;
+				case 4:
+					RoboControl_Struct.Leg_Length = 0.30f;
+					break;
+				case 5:
+					RoboControl_Struct.Leg_Length = 0.35f;
+					break;
+			}
+		}
 			
-// 		/*===| Ctrl组合键 |===*/
-// 		if(Remote_Press_Ctrl) 
-// 		{
-// 			if(Remote_PressSingle_R)
-// 			{
-// 				Chassis_Control_Struct.Recover_from_ground_Flag = 1;//翻倒自起功能
-// 			}
-// 			if(Remote_PressSingle_E)
-// 			{
-// 				Chassis_Control_Struct.Smooth_restand_Flag = 1;//缓起立自救功能
-// 			}
-// 			if(Remote_PressSingle_Q)
-// 			{
-// 				Chassis_Control_Struct.UpStep_Flag = 1;
-// 			}				
-// 			if(Remote_PressSingle_Z)
-// 			{
-// 				//手动清零部分功能标志位 避免疯车
-// 				Chassis_Control_Struct.Recover_from_ground_Flag = 0;
-// 				Chassis_Control_Struct.Recover_State    = 0;
-// 				Chassis_Control_Struct.Jump_Flag        = 0;
-// 				Chassis_Control_Struct.Jump_State       = 0;
-// 				Chassis_Control_Struct.UpStep_Dect_Flag = 0;
-// 				Chassis_Control_Struct.UpStep_Flag   	= 0;
-// 				Chassis_Control_Struct.UpStep_State  	= 0;
-// 			}
-// 		}  
+		/*===| Ctrl组合键 |===*/
+		if(Remote_Press_Ctrl) 
+		{
+			if(Remote_PressSingle_R)
+			{
+				Chassis_Control_Struct.Recover_from_ground_Flag = 1;//翻倒自起功能
+			}
+			if(Remote_PressSingle_E)
+			{
+				Chassis_Control_Struct.Smooth_restand_Flag = 1;//缓起立自救功能
+			}
+			if(Remote_PressSingle_Q)
+			{
+				Chassis_Control_Struct.UpStep_Flag = 1;
+			}				
+			if(Remote_PressSingle_Z)
+			{
+				//手动清零部分功能标志位 避免疯车
+				Chassis_Control_Struct.Recover_from_ground_Flag = 0;
+				Chassis_Control_Struct.Recover_State    = 0;
+				Chassis_Control_Struct.Jump_Flag        = 0;
+				Chassis_Control_Struct.Jump_State       = 0;
+				Chassis_Control_Struct.UpStep_Dect_Flag = 0;
+				Chassis_Control_Struct.UpStep_Flag   	= 0;
+				Chassis_Control_Struct.UpStep_State  	= 0;
+			}
+		}  
 		
-// 		/*===| 按鼠标中键跳跃 |===*/
-// 		if(Remote_PressSingle_Mouse_M)
-// 		{
-// 			Chassis_Control_Struct.Jump_Flag = 1;//机器人跳跃功能
-// 		}
+		/*===| 按鼠标中键跳跃 |===*/
+		if(Remote_PressSingle_Mouse_M)
+		{
+			Chassis_Control_Struct.Jump_Flag = 1;//机器人跳跃功能
+		}
 		
-// 		/*===| 按住Shift开启小陀螺 松手即停 每次松手后自动改变下次小陀螺的方向 |===*/
-// 		if(Remote_Press_Shift) 
-// 		{
-// 			if(RoboControl_Struct.Chassis_State != Chassis_SPIN)
-//             {
-//                 RoboControl_Struct.Chassis_State = Chassis_SPIN;
-//             }  
-// 		}
-// 		else if(Remote_ReleaseSingle_Shift) 
-// 		{
-// 			RoboControl_Struct.SPIN_Direction_Flag = !RoboControl_Struct.SPIN_Direction_Flag;
-// 			RoboControl_Struct.Chassis_State = Chassis_STATIC;
-// 			if(fabsf(RoboControl_Struct.Yaw_Err)<90.0f)
-// 			{
-// 				Chassis_Control_Struct.Chassis_Forward_Change_Flag = 0;
-// 			}
-// 			else
-// 			{
-// 				Chassis_Control_Struct.Chassis_Forward_Change_Flag = 1;
-// 			}
-// 		}
+		/*===| 按住Shift开启小陀螺 松手即停 每次松手后自动改变下次小陀螺的方向 |===*/
+		if(Remote_Press_Shift) 
+		{
+			if(RoboControl_Struct.Chassis_State != Chassis_SPIN)
+            {
+                RoboControl_Struct.Chassis_State = Chassis_SPIN;
+            }  
+		}
+		else if(Remote_ReleaseSingle_Shift) 
+		{
+			RoboControl_Struct.SPIN_Direction_Flag = !RoboControl_Struct.SPIN_Direction_Flag;
+			RoboControl_Struct.Chassis_State = Chassis_STATIC;
+			if(fabsf(RoboControl_Struct.Yaw_Err)<90.0f)
+			{
+				Chassis_Control_Struct.Chassis_Forward_Change_Flag = 0;
+			}
+			else
+			{
+				Chassis_Control_Struct.Chassis_Forward_Change_Flag = 1;
+			}
+		}
 		
-// 		/*===| 按V开关超电 |===*/
-// 		if(Remote_PressSingle_V)
-// 		{
-// 			RoboControl_Struct.SuperCap_State = !RoboControl_Struct.SuperCap_State;
-// 			if(RoboControl_Struct.SuperCap_State) Buzzer_Set_SoundEffect(Buzzer_SoundEffect_SuperCap_ON);
-// 			else Buzzer_Set_SoundEffect(Buzzer_SoundEffect_SuperCap_OFF);
-// 		}   
+		/*===| 按V开关超电 |===*/
+		if(Remote_PressSingle_V)
+		{
+			RoboControl_Struct.SuperCap_State = !RoboControl_Struct.SuperCap_State;
+			if(RoboControl_Struct.SuperCap_State) Buzzer_Set_SoundEffect(Buzzer_SoundEffect_SuperCap_ON);
+			else Buzzer_Set_SoundEffect(Buzzer_SoundEffect_SuperCap_OFF);
+		}   
 		
-// 		/*===| 按F切换速度档位 |===*/
-// 		if(Remote_PressSingle_F)
-// 		{
-// 			RoboControl_Struct.Chassis_Speed_Level++;
-// 			if(RoboControl_Struct.Chassis_Speed_Level == 6) RoboControl_Struct.Chassis_Speed_Level = 1;
-// 		}
+		/*===| 按F切换速度档位 |===*/
+		if(Remote_PressSingle_F)
+		{
+			RoboControl_Struct.Chassis_Speed_Level++;
+			if(RoboControl_Struct.Chassis_Speed_Level == 6) RoboControl_Struct.Chassis_Speed_Level = 1;
+		}
 		
-// 		/*===| 长按B重刷UI |===*/
-// 		if(Remote_Press_B)
-// 		{
-// 			RoboControl_Struct.Refresh_UI_Flag = 1;
-// 		}
-// 		else
-// 		{
-// 			RoboControl_Struct.Refresh_UI_Flag = 0;
-// 		}
+		/*===| 长按B重刷UI |===*/
+		if(Remote_Press_B)
+		{
+			RoboControl_Struct.Refresh_UI_Flag = 1;
+		}
+		else
+		{
+			RoboControl_Struct.Refresh_UI_Flag = 0;
+		}
     
-// 		/*===| 按Z切换底盘静止状态 |===*/
-// 		if(!Remote_Press_Ctrl && Remote_PressSingle_Z)
-// 		{
-// 			if(RoboControl_Struct.Chassis_State != Chassis_STATIC) RoboControl_Struct.Chassis_State = Chassis_STATIC;
-// 			else RoboControl_Struct.Chassis_State = Chassis_FOLLOW;
-// 		} 
+		/*===| 按Z切换底盘静止状态 |===*/
+		if(!Remote_Press_Ctrl && Remote_PressSingle_Z)
+		{
+			if(RoboControl_Struct.Chassis_State != Chassis_STATIC) RoboControl_Struct.Chassis_State = Chassis_STATIC;
+			else RoboControl_Struct.Chassis_State = Chassis_FOLLOW;
+		} 
 		
-// 		/*===| 按X失能 |===*/
-// 		if(Remote_PressSingle_X) 
-// 		{
-// 			Robo_Stop();
-// 		}
+		/*===| 按X失能 |===*/
+		if(Remote_PressSingle_X) 
+		{
+			Robo_Stop();
+		}
 		
-// 		/*===| 按G重启 |===*/
-// 		if(Remote_PressSingle_G || Chassis_Control_Struct.Smooth_restand_Flag == 1)
-// 		{
-// 			Robo_Restart();
-// 		} 
-// }
+		/*===| 按G重启 |===*/
+		if(Remote_PressSingle_G || Chassis_Control_Struct.Smooth_restand_Flag == 1)
+		{
+			Robo_Restart();
+		} 
+}
 		
 
 /**
@@ -740,7 +736,7 @@ void Robo_Restart(void)
 	
 	/*===| 默认模块状态 |===*/
 	RoboControl_Struct.Chassis_State  = Chassis_STATIC;
-    RoboControl_Struct.SuperCap_State = 0;
+    RoboControl_Struct.SuperCap_State = 1;
 	
 	RoboControl_Struct.Leg_Length = 0.15f;
 	Chassis_Control_Struct.Leg_length_Level = 1;
