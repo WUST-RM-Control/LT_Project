@@ -1,0 +1,53 @@
+# ==============================
+# Keil / MDK build files
+# ==============================
+
+*.o
+*.d
+*.axf
+*.hex
+*.bin
+*.map
+*.lnp
+*.dep
+*.elf
+*.lst
+*.crf
+*.build_log.htm
+
+# Keil user-specific files
+*.uvguix
+*.uvguix.*
+
+# ==============================
+# EIDE / VS Code generated files
+# ==============================
+
+**/.eide/log/
+**/.eide.usr.ctx.json
+**/.vscode/launch.json
+
+**/build/
+**/bin/
+**/obj/
+**/out/
+
+*.ept
+*.eide-template
+
+**/.cmsis/
+**/.vscode/*.lock
+
+# ==============================
+# Temporary files
+# ==============================
+
+*.tmp
+*.bak
+*.log
+Thumbs.db
+.DS_Store
+
+*.htm
+*.uvoptx
+**/.comment-recovery/

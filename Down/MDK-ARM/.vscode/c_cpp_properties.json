@@ -1,0 +1,28 @@
+{
+  "configurations": [
+    {
+      "name": "windows-gcc-x86",
+      "includePath": [
+        "${workspaceFolder}/**"
+      ],
+      "defines": [
+        "USE_HAL_DRIVER",
+        "STM32G474xx",
+        "ARM_MATH_CM4",
+        "__FPU_USED=1U",
+        "__FPU_PRESENT=1U"
+      ],
+      "compilerPath": "D:/MinGW/bin/gcc.exe",
+      "compilerArgs": [
+        "--target=arm-arm-none-eabi",
+        "-mcpu=cortex-m4",
+        "-mfpu=fpv4-sp-d16",
+        "-mfloat-abi=hard"
+      ],
+      "cStandard": "${default}",
+      "cppStandard": "${default}",
+      "intelliSenseMode": "windows-gcc-x86"
+    }
+  ],
+  "version": 4
+}

@@ -23,6 +23,14 @@
 ".\kawashiro_frame_g474\robocontrol.o"
 ".\kawashiro_frame_g474\aim.o"
 ".\kawashiro_frame_g474\key_led.o"
+".\kawashiro_frame_g474\wheelleg_chassis.o"
+".\kawashiro_frame_g474\wheelleg_motor.o"
+".\kawashiro_frame_g474\wheelleg_kinematics.o"
+".\kawashiro_frame_g474\wheelleg_vmc.o"
+".\kawashiro_frame_g474\wheelleg_legcontroller.o"
+".\kawashiro_frame_g474\wheelleg_springcomp.o"
+".\kawashiro_frame_g474\wheelleg_lqr.o"
+".\kawashiro_frame_g474\wheelleg_output.o"
 ".\kawashiro_frame_g474\can_driver.o"
 ".\kawashiro_frame_g474\usart_driver.o"
 ".\kawashiro_frame_g474\usb_driver.o"
@@ -138,4 +146,6 @@
 ".\kawashiro_frame_g474\transformfunctionsf16.o"
 ".\kawashiro_frame_g474\windowfunctions.o"
 --library_type=microlib --strict --scatter "stm32g474xx_flash.sct"
---summary_stderr --info summarysizes -o .\Kawashiro_Frame_G474\Kawashiro_Frame_G474.axf
+--summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list ".\Kawashiro_Frame_G474\Kawashiro_Frame_G474.map" -o .\Kawashiro_Frame_G474\Kawashiro_Frame_G474.axf

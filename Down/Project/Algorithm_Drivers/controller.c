@@ -5,7 +5,7 @@
  * @author  Zhang Hongyu (fuzzy pid)
  * @version V1.1.3
  * @date    2021/7/3
- * @brief   DWT¶¨Ê±Æ÷ÓÃÓÚ¼ÆËã¿ØÖÆÖÜÆÚ OLSÓÃÓÚÌáÈ¡ÐÅºÅÎ¢·Ö
+ * @brief   DWTå®šæ—¶å™¨ç”¨äºŽè®¡ç®—æŽ§åˆ¶å‘¨æœŸ OLSç”¨äºŽæå–ä¿¡å·å¾®åˆ†
  ******************************************************************************
  * @attention
  *
@@ -82,13 +82,13 @@ void Fuzzy_Rule_Implementation(FuzzyRule_t *fuzzyRule, float measure, float ref)
     fuzzyRule->ec = (fuzzyRule->e - fuzzyRule->eLast) / fuzzyRule->dt;
     fuzzyRule->eLast = fuzzyRule->e;
 
-    //Á¥ÊôÇø¼ä
+    //éš¶å±žåŒºé—´
     eLeftIndex = fuzzyRule->e >= 3 * fuzzyRule->eStep ? 6 : (fuzzyRule->e <= -3 * fuzzyRule->eStep ? 0 : (fuzzyRule->e >= 0 ? ((int)(fuzzyRule->e / fuzzyRule->eStep) + 3) : ((int)(fuzzyRule->e / fuzzyRule->eStep) + 2)));
     eRightIndex = fuzzyRule->e >= 3 * fuzzyRule->eStep ? 6 : (fuzzyRule->e <= -3 * fuzzyRule->eStep ? 0 : (fuzzyRule->e >= 0 ? ((int)(fuzzyRule->e / fuzzyRule->eStep) + 4) : ((int)(fuzzyRule->e / fuzzyRule->eStep) + 3)));
     ecLeftIndex = fuzzyRule->ec >= 3 * fuzzyRule->ecStep ? 6 : (fuzzyRule->ec <= -3 * fuzzyRule->ecStep ? 0 : (fuzzyRule->ec >= 0 ? ((int)(fuzzyRule->ec / fuzzyRule->ecStep) + 3) : ((int)(fuzzyRule->ec / fuzzyRule->ecStep) + 2)));
     ecRightIndex = fuzzyRule->ec >= 3 * fuzzyRule->ecStep ? 6 : (fuzzyRule->ec <= -3 * fuzzyRule->ecStep ? 0 : (fuzzyRule->ec >= 0 ? ((int)(fuzzyRule->ec / fuzzyRule->ecStep) + 4) : ((int)(fuzzyRule->ec / fuzzyRule->ecStep) + 3)));
 
-    //Á¥Êô¶È
+    //éš¶å±žåº¦
     eLeftTemp = fuzzyRule->e >= 3 * fuzzyRule->eStep ? 0 : (fuzzyRule->e <= -3 * fuzzyRule->eStep ? 1 : (eRightIndex - fuzzyRule->e / fuzzyRule->eStep - 3));
     eRightTemp = fuzzyRule->e >= 3 * fuzzyRule->eStep ? 1 : (fuzzyRule->e <= -3 * fuzzyRule->eStep ? 0 : (fuzzyRule->e / fuzzyRule->eStep - eLeftIndex + 3));
     ecLeftTemp = fuzzyRule->ec >= 3 * fuzzyRule->ecStep ? 0 : (fuzzyRule->ec <= -3 * fuzzyRule->ecStep ? 1 : (ecRightIndex - fuzzyRule->ec / fuzzyRule->ecStep - 3));
@@ -111,7 +111,7 @@ void Fuzzy_Rule_Implementation(FuzzyRule_t *fuzzyRule, float measure, float ref)
 }
 
 /******************************* PID CONTROL *********************************/
-// PIDÓÅ»¯»·½Úº¯ÊýÉùÃ÷
+// PIDä¼˜åŒ–çŽ¯èŠ‚å‡½æ•°å£°æ˜Ž
 static void f_Trapezoid_Intergral(PID_t *pid);
 static void f_Integral_Limit(PID_t *pid);
 static void f_Derivative_On_Measurement(PID_t *pid);
@@ -123,10 +123,10 @@ static void f_Proportion_Limit(PID_t *pid);
 static void f_PID_ErrorHandle(PID_t *pid);
 
 /**
- * @brief          PID³õÊ¼»¯   PID initialize
- * @param[in]      PID½á¹¹Ìå   PID structure
- * @param[in]      ÂÔ
- * @retval         ·µ»Ø¿Õ      null
+ * @brief          PIDåˆå§‹åŒ–   PID initialize
+ * @param[in]      PIDç»“æž„ä½“   PID structure
+ * @param[in]      ç•¥
+ * @retval         è¿”å›žç©º      null
  */
 void INS_PID_Init(
     PID_t *pid,
@@ -158,7 +158,7 @@ void INS_PID_Init(
     pid->Kd = Kd;
     pid->ITerm = 0;
 
-    // ±äËÙ»ý·Ö²ÎÊý
+    // å˜é€Ÿç§¯åˆ†å‚æ•°
     // coefficient of changing integration rate
     pid->CoefA = A;
     pid->CoefB = B;
@@ -167,19 +167,19 @@ void INS_PID_Init(
 
     pid->Derivative_LPF_RC = derivative_lpf_rc;
 
-    // ×îÐ¡¶þ³ËÌáÈ¡ÐÅºÅÎ¢·Ö³õÊ¼»¯
+    // æœ€å°äºŒä¹˜æå–ä¿¡å·å¾®åˆ†åˆå§‹åŒ–
     // differential signal is distilled by OLS
     pid->OLS_Order = ols_order;
     OLS_Init(&pid->OLS, ols_order);
 
-    // DWT¶¨Ê±Æ÷¼ÆÊý±äÁ¿ÇåÁã
+    // DWTå®šæ—¶å™¨è®¡æ•°å˜é‡æ¸…é›¶
     // reset DWT Timer count counter
     pid->DWT_CNT = 0;
 
-    // ÉèÖÃPIDÓÅ»¯»·½Ú
+    // è®¾ç½®PIDä¼˜åŒ–çŽ¯èŠ‚
     pid->Improve = improve;
 
-    // ÉèÖÃPIDÒì³£´¦Àí Ä¿Ç°½ö°üº¬µç»ú¶Â×ª±£»¤
+    // è®¾ç½®PIDå¼‚å¸¸å¤„ç† ç›®å‰ä»…åŒ…å«ç”µæœºå µè½¬ä¿æŠ¤
     pid->ERRORHandler.ERRORCount = 0;
     pid->ERRORHandler.ERRORType = PID_ERROR_NONE;
 
@@ -187,11 +187,11 @@ void INS_PID_Init(
 }
 
 /**
- * @brief          PID¼ÆËã
- * @param[in]      PID½á¹¹Ìå
- * @param[in]      ²âÁ¿Öµ
- * @param[in]      ÆÚÍûÖµ
- * @retval         ·µ»Ø¿Õ
+ * @brief          PIDè®¡ç®—
+ * @param[in]      PIDç»“æž„ä½“
+ * @param[in]      æµ‹é‡å€¼
+ * @param[in]      æœŸæœ›å€¼
+ * @retval         è¿”å›žç©º
  */
 float INS_PID_Position_Calculate(PID_t *pid, float measure, float ref)
 {
@@ -231,19 +231,19 @@ float INS_PID_Position_Calculate(PID_t *pid, float measure, float ref)
         if (pid->User_Func2_f != NULL)
             pid->User_Func2_f(pid);
 
-        // ÌÝÐÎ»ý·Ö
+        // æ¢¯å½¢ç§¯åˆ†
         if (pid->Improve & Trapezoid_Intergral)
             f_Trapezoid_Intergral(pid);
-        // ±äËÙ»ý·Ö
+        // å˜é€Ÿç§¯åˆ†
         if (pid->Improve & ChangingIntegrationRate)
             f_Changing_Integration_Rate(pid);
-        // Î¢·ÖÏÈÐÐ
+        // å¾®åˆ†å…ˆè¡Œ
         if (pid->Improve & Derivative_On_Measurement)
             f_Derivative_On_Measurement(pid);
-        // Î¢·ÖÂË²¨Æ÷
+        // å¾®åˆ†æ»¤æ³¢å™¨
         if (pid->Improve & DerivativeFilter)
             f_Derivative_Filter(pid);
-        // »ý·ÖÏÞ·ù
+        // ç§¯åˆ†é™å¹…
         if (pid->Improve & Integral_Limit)
             f_Integral_Limit(pid);
 
@@ -251,14 +251,14 @@ float INS_PID_Position_Calculate(PID_t *pid, float measure, float ref)
 
         pid->Output = pid->Pout + pid->Iout + pid->Dout;
 
-        // Êä³öÂË²¨
+        // è¾“å‡ºæ»¤æ³¢
         if (pid->Improve & OutputFilter)
             f_Output_Filter(pid);
 
-        // Êä³öÏÞ·ù
+        // è¾“å‡ºé™å¹…
         f_Output_Limit(pid);
 
-        // ÎÞ¹Ø½ôÒª
+        // æ— å…³ç´§è¦
         f_Proportion_Limit(pid);
     }
 
@@ -283,7 +283,7 @@ static void f_Changing_Integration_Rate(PID_t *pid)
 {
     if (pid->Err * pid->Iout > 0)
     {
-        // »ý·Ö³ÊÀÛ»ýÇ÷ÊÆ
+        // ç§¯åˆ†å‘ˆç´¯ç§¯è¶‹åŠ¿
         // Integral still increasing
         if (abs(pid->Err) <= pid->CoefB)
             return; // Full integral
@@ -303,7 +303,7 @@ static void f_Integral_Limit(PID_t *pid)
     {
         if (pid->Err * pid->Iout > 0)
         {
-            // »ý·Ö³ÊÀÛ»ýÇ÷ÊÆ
+            // ç§¯åˆ†å‘ˆç´¯ç§¯è¶‹åŠ¿
             // Integral still increasing
             pid->ITerm = 0;
         }
@@ -401,10 +401,10 @@ static void f_PID_ErrorHandle(PID_t *pid)
 
 /*************************** FEEDFORWARD CONTROL *****************************/
 /**
- * @brief          Ç°À¡¿ØÖÆ³õÊ¼»¯
- * @param[in]      Ç°À¡¿ØÖÆ½á¹¹Ìå
- * @param[in]      ÂÔ
- * @retval         ·µ»Ø¿Õ
+ * @brief          å‰é¦ˆæŽ§åˆ¶åˆå§‹åŒ–
+ * @param[in]      å‰é¦ˆæŽ§åˆ¶ç»“æž„ä½“
+ * @param[in]      ç•¥
+ * @retval         è¿”å›žç©º
  */
 void Feedforward_Init(
     Feedforward_t *ffc,
@@ -416,7 +416,7 @@ void Feedforward_Init(
 {
     ffc->MaxOut = max_out;
 
-    // ÉèÖÃÇ°À¡¿ØÖÆÆ÷²ÎÊý Ïê¼ûÇ°À¡¿ØÖÆ½á¹¹Ìå¶¨Òå
+    // è®¾ç½®å‰é¦ˆæŽ§åˆ¶å™¨å‚æ•° è¯¦è§å‰é¦ˆæŽ§åˆ¶ç»“æž„ä½“å®šä¹‰
     // set parameters of feed-forward controller (see struct definition)
     if (c != NULL && ffc != NULL)
     {
@@ -434,7 +434,7 @@ void Feedforward_Init(
 
     ffc->LPF_RC = lpf_rc;
 
-    // ×îÐ¡¶þ³ËÌáÈ¡ÐÅºÅÎ¢·Ö³õÊ¼»¯
+    // æœ€å°äºŒä¹˜æå–ä¿¡å·å¾®åˆ†åˆå§‹åŒ–
     // differential signal is distilled by OLS
     ffc->Ref_dot_OLS_Order = ref_dot_ols_order;
     ffc->Ref_ddot_OLS_Order = ref_ddot_ols_order;
@@ -449,11 +449,11 @@ void Feedforward_Init(
 }
 
 /**
- * @brief          PID¼ÆËã
- * @param[in]      PID½á¹¹Ìå
- * @param[in]      ²âÁ¿Öµ
- * @param[in]      ÆÚÍûÖµ
- * @retval         ·µ»Ø¿Õ
+ * @brief          PIDè®¡ç®—
+ * @param[in]      PIDç»“æž„ä½“
+ * @param[in]      æµ‹é‡å€¼
+ * @param[in]      æœŸæœ›å€¼
+ * @retval         è¿”å›žç©º
  */
 float Feedforward_Calculate(Feedforward_t *ffc, float ref)
 {
@@ -462,21 +462,21 @@ float Feedforward_Calculate(Feedforward_t *ffc, float ref)
     ffc->Ref = ref * ffc->dt / (ffc->LPF_RC + ffc->dt) +
                ffc->Ref * ffc->LPF_RC / (ffc->LPF_RC + ffc->dt);
 
-    // ¼ÆËãÒ»½×µ¼Êý
+    // è®¡ç®—ä¸€é˜¶å¯¼æ•°
     // calculate first derivative
     if (ffc->Ref_dot_OLS_Order > 2)
         ffc->Ref_dot = OLS_Derivative(&ffc->Ref_dot_OLS, ffc->dt, ffc->Ref);
     else
         ffc->Ref_dot = (ffc->Ref - ffc->Last_Ref) / ffc->dt;
 
-    // ¼ÆËã¶þ½×µ¼Êý
+    // è®¡ç®—äºŒé˜¶å¯¼æ•°
     // calculate second derivative
     if (ffc->Ref_ddot_OLS_Order > 2)
         ffc->Ref_ddot = OLS_Derivative(&ffc->Ref_ddot_OLS, ffc->dt, ffc->Ref_dot);
     else
         ffc->Ref_ddot = (ffc->Ref_dot - ffc->Last_Ref_dot) / ffc->dt;
 
-    // ¼ÆËãÇ°À¡¿ØÖÆÊä³ö
+    // è®¡ç®—å‰é¦ˆæŽ§åˆ¶è¾“å‡º
     // calculate feed-forward controller output
     ffc->Output = ffc->c[0] * ffc->Ref + ffc->c[1] * ffc->Ref_dot + ffc->c[2] * ffc->Ref_ddot;
 
@@ -502,7 +502,7 @@ void LDOB_Init(
 
     ldob->DeadBand = deadband;
 
-    // ÉèÖÃÏßÐÔÈÅ¶¯¹Û²âÆ÷²ÎÊý Ïê¼ûLDOB½á¹¹Ìå¶¨Òå
+    // è®¾ç½®çº¿æ€§æ‰°åŠ¨è§‚æµ‹å™¨å‚æ•° è¯¦è§LDOBç»“æž„ä½“å®šä¹‰
     // set parameters of linear disturbance observer (see struct definition)
     if (c != NULL && ldob != NULL)
     {
@@ -518,11 +518,11 @@ void LDOB_Init(
         ldob->Max_Disturbance = 0;
     }
 
-    // ÉèÖÃQ(s)´ø¿í  Q(s)Ñ¡ÓÃÒ»½×¹ßÐÔ»·½Ú
+    // è®¾ç½®Q(s)å¸¦å®½  Q(s)é€‰ç”¨ä¸€é˜¶æƒ¯æ€§çŽ¯èŠ‚
     // set bandwidth of Q(s)    Q(s) is chosen as a first-order low-pass form
     ldob->LPF_RC = lpf_rc;
 
-    // ×îÐ¡¶þ³ËÌáÈ¡ÐÅºÅÎ¢·Ö³õÊ¼»¯
+    // æœ€å°äºŒä¹˜æå–ä¿¡å·å¾®åˆ†åˆå§‹åŒ–
     // differential signal is distilled by OLS
     ldob->Measure_dot_OLS_Order = measure_dot_ols_order;
     ldob->Measure_ddot_OLS_Order = measure_ddot_ols_order;
@@ -544,21 +544,21 @@ float LDOB_Calculate(LDOB_t *ldob, float measure, float u)
 
     ldob->u = u;
 
-    // ¼ÆËãÒ»½×µ¼Êý
+    // è®¡ç®—ä¸€é˜¶å¯¼æ•°
     // calculate first derivative
     if (ldob->Measure_dot_OLS_Order > 2)
         ldob->Measure_dot = OLS_Derivative(&ldob->Measure_dot_OLS, ldob->dt, ldob->Measure);
     else
         ldob->Measure_dot = (ldob->Measure - ldob->Last_Measure) / ldob->dt;
 
-    // ¼ÆËã¶þ½×µ¼Êý
+    // è®¡ç®—äºŒé˜¶å¯¼æ•°
     // calculate second derivative
     if (ldob->Measure_ddot_OLS_Order > 2)
         ldob->Measure_ddot = OLS_Derivative(&ldob->Measure_ddot_OLS, ldob->dt, ldob->Measure_dot);
     else
         ldob->Measure_ddot = (ldob->Measure_dot - ldob->Last_Measure_dot) / ldob->dt;
 
-    // ¹À¼Æ×ÜÈÅ¶¯
+    // ä¼°è®¡æ€»æ‰°åŠ¨
     // estimate external disturbances and internal disturbances caused by model uncertainties
     ldob->Disturbance = ldob->c[0] * ldob->Measure + ldob->c[1] * ldob->Measure_dot + ldob->c[2] * ldob->Measure_ddot - ldob->u;
     ldob->Disturbance = ldob->Disturbance * ldob->dt / (ldob->LPF_RC + ldob->dt) +
@@ -566,7 +566,7 @@ float LDOB_Calculate(LDOB_t *ldob, float measure, float u)
 
     ldob->Disturbance = float_constrain(ldob->Disturbance, -ldob->Max_Disturbance, ldob->Max_Disturbance);
 
-    // ÈÅ¶¯Êä³öËÀÇø
+    // æ‰°åŠ¨è¾“å‡ºæ­»åŒº
     // deadband of disturbance output
     if (abs(ldob->Disturbance) > ldob->DeadBand * ldob->Max_Disturbance)
         ldob->Output = ldob->Disturbance;

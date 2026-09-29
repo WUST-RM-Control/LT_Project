@@ -16,8 +16,8 @@
         <TargetCommonOption>
           <Device>STM32G474VETx</Device>
           <Vendor>STMicroelectronics</Vendor>
-          <PackID>Keil.STM32G4xx_DFP.2.0.0</PackID>
-          <PackURL>https://www.keil.com/pack/</PackURL>
+          <PackID>Keil.STM32G4xx_DFP.1.4.0</PackID>
+          <PackURL>http://www.keil.com/pack/</PackURL>
           <Cpu>IRAM(0x20000000-0x2001FFFF) IROM(0x8000000-0x807FFFF) CLOCK(8000000) FPU2 CPUTYPE("Cortex-M4") TZ</Cpu>
           <FlashUtilSpec></FlashUtilSpec>
           <StartupFile></StartupFile>
@@ -81,7 +81,7 @@
           </BeforeMake>
           <AfterMake>
             <RunUserProg1>0</RunUserProg1>
-            <RunUserProg2>1</RunUserProg2>
+            <RunUserProg2>0</RunUserProg2>
             <UserProg1Name></UserProg1Name>
             <UserProg2Name></UserProg2Name>
             <UserProg1Dos16Mode>0</UserProg1Dos16Mode>
@@ -163,7 +163,7 @@
             <AdsACrf>1</AdsACrf>
             <AdsANop>0</AdsANop>
             <AdsANot>0</AdsANot>
-            <AdsLLst>0</AdsLLst>
+            <AdsLLst>1</AdsLLst>
             <AdsLmap>1</AdsLmap>
             <AdsLcgr>1</AdsLcgr>
             <AdsLsym>1</AdsLsym>
@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32G474xx,ARM_MATH_CM4,ARM_MATH_CM4,__FPU_USED=1U,__FPU_PRESENT=1U</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32G4xx_HAL_Driver/Inc;../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32G4xx/Include;../Drivers/CMSIS/Include;../USB_Device/App;../USB_Device/Target;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Middlewares/ST/STM32_USB_Device_Library/Core/Inc;../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc;../Project/Algorithm_Drivers;../Project/BSP;../Project/Commnuicate_Drivers;../Project/Hardware_Drivers;../Project/Robot_Application;../Project/UI</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32G4xx_HAL_Driver/Inc;../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32G4xx/Include;../Drivers/CMSIS/Include;../USB_Device/App;../USB_Device/Target;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Middlewares/ST/STM32_USB_Device_Library/Core/Inc;../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc;../Project/Algorithm_Drivers;../Project/BSP;../Project/Commnuicate_Drivers;../Project/Hardware_Drivers;../Project/Robot_Application;../Project/UI;D:\Keil\Arm\Packs\ARM\CMSIS-DSP\1.17.0\Include;..\Project\WheelLeg</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -972,6 +972,51 @@
               <FileName>Define.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\Project\Robot_Application\Define.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>WheelLeg</GroupName>
+          <Files>
+            <File>
+              <FileName>WheelLeg_Chassis.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Project\WheelLeg\WheelLeg_Chassis.c</FilePath>
+            </File>
+            <File>
+              <FileName>WheelLeg_Motor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Project\WheelLeg\WheelLeg_Motor.c</FilePath>
+            </File>
+            <File>
+              <FileName>WheelLeg_Kinematics.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Project\WheelLeg\WheelLeg_Kinematics.c</FilePath>
+            </File>
+            <File>
+              <FileName>WheelLeg_VMC.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Project\WheelLeg\WheelLeg_VMC.c</FilePath>
+            </File>
+            <File>
+              <FileName>WheelLeg_LegController.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Project\WheelLeg\WheelLeg_LegController.c</FilePath>
+            </File>
+            <File>
+              <FileName>WheelLeg_SpringComp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Project\WheelLeg\WheelLeg_SpringComp.c</FilePath>
+            </File>
+            <File>
+              <FileName>WheelLeg_LQR.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Project\WheelLeg\WheelLeg_LQR.c</FilePath>
+            </File>
+            <File>
+              <FileName>WheelLeg_Output.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Project\WheelLeg\WheelLeg_Output.c</FilePath>
             </File>
           </Files>
         </Group>

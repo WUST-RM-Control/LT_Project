@@ -296,9 +296,9 @@ typedef __PACKED_STRUCT
 typedef __PACKED_STRUCT
 {
         Referee_Package_Header_StructTypedef Header;
-    uint16_t Cmd_ID;                       // ???
-    uint8_t Data[30];                      // ??????????
-    uint16_t Frame_Tail;                   // ??CRC16??
+    uint16_t Cmd_ID;                       // 命令码
+    uint8_t Data[30];                      // 自定义控制器数据
+    uint16_t Frame_Tail;                   // 帧尾 CRC16 校验
 } Controler_Struct_TypeDef; 
 
 

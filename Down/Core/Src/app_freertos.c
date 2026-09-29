@@ -25,7 +25,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "WheelLeg_Chassis.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -117,12 +117,12 @@ void MX_FREERTOS_Init(void) {
   osThreadDef(INS, INS_Task, osPriorityLow, 0, 1024);
   INSHandle = osThreadCreate(osThread(INS), NULL);
 
-  /* definition and creation of Gimbal */
-  osThreadDef(Gimbal, Gimbal_Task, osPriorityIdle, 0, 512);
-  GimbalHandle = osThreadCreate(osThread(Gimbal), NULL);
+//  /* definition and creation of Gimbal */
+//  osThreadDef(Gimbal, Gimbal_Task, osPriorityIdle, 0, 512);
+//  GimbalHandle = osThreadCreate(osThread(Gimbal), NULL);
 
   /* definition and creation of Chassis */
-  osThreadDef(Chassis, Chassis_Task, osPriorityHigh, 0, 2048);
+  osThreadDef(Chassis, WheelLeg_Chassis_Task, osPriorityHigh, 0, 2048);
   ChassisHandle = osThreadCreate(osThread(Chassis), NULL);
 
   /* definition and creation of Communicate */

@@ -95,10 +95,11 @@ void INS_Task(void)
     for(;;)
     {
         INS_Data_Ticker++;
-       
-        if(INS_Data_Ticker >= 100) INS_Data_Gimbal.If_INS_Init = 0;
-        if(INS_Data_Ticker >= 200) INS_Data_Ticker = 100;
-        if(INS_Data_Ticker == 199) C_IMU_Reset();
+		
+       //临时注释
+//        if(INS_Data_Ticker >= 100) INS_Data_Gimbal.If_INS_Init = 0;
+//        if(INS_Data_Ticker >= 200) INS_Data_Ticker = 100;
+//        if(INS_Data_Ticker == 199) C_IMU_Reset();
         
         
         const float gravity[3] = {0, 0, 9.81f};
