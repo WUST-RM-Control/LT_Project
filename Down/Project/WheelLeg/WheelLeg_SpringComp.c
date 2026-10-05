@@ -1,13 +1,12 @@
 /**
  * @file    WheelLeg_SpringComp.c[氮气弹簧补偿]
  * @brief   氮气弹簧标定和补偿
- * @details 统一接口,外部控制底盘数据和传感器数据统一从 Chassis_Task 传入；
- *          Chassis_Task 调用 WheelLeg 文件的上层函数实现底盘的控制；
- *          底盘数据定义在各个 WheelLeg 前缀文件中，并通过 Chassis_Control_Struct 内部指针指向必要数据
+ * @details 包含初始化函数和补偿函数，还有阻塞式氮气弹簧标定任务
  * 
  */
-#include "WheelLeg_SpringComp.h"
 
+#include "WheelLeg_SpringComp.h"
+#include "Buzzer.h"
 #include <math.h>
 #include <string.h>
 
@@ -28,10 +27,12 @@ typedef enum
 
 typedef struct 
 {
+    //0正转(初始值转到末端值)，1反转
     uint8_t Caled_State;
+    //初始转动的目标值(UP:一开始目标值减小，Down:一开始目标值增大)
     Start_State_EnumTypedef Start_State;
 
-    float Compensation_Speed;
+    float Compensation_Speed;//每秒改变的目标值
     int8_t Compensation_Round;
     float Compensation_Distance_UP;
     float Compensation_Distance_Down;
@@ -101,6 +102,7 @@ typedef struct
 static void Leg_Date_Compensation_Calculate(Motor_Compensation_Config_StructTypedef *L0_Leg_Compensation_Config,const volatile Motor_Data_StructTypeDef * const Motor1,const volatile Motor_Data_StructTypeDef * const Motor2,const volatile Motor_Data_StructTypeDef * const Motor3,const volatile Motor_Data_StructTypeDef * const Motor4);
 static void Motor_Compensation(Motor_Compensation_Config_StructTypedef *Config);
 static float Motor_Compensation_Get_Data(float Distance, float Speed, Motor_Compensation_Config_StructTypedef *Config);
+static float WheelLeg_SpringComp_Fit_K_Out_Of_Range(const float *Cal_Data,Motor_Compensation_Config_StructTypedef Config);
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -108,10 +110,23 @@ static float Motor_Compensation_Get_Data(float Distance, float Speed, Motor_Comp
 //补偿精度
 //单圈采样点数，保存数组需要 2[正|反圈 & 齿槽补偿|摩擦补偿] * 4[float类型] * Point_Num字节大小
 #define Point_Num 1024
+
+//解算有关定义
 #define Angle_to_Radain	 0.0174533f //角度to弧度(PI/180)
 #define	Radain_to_Angle	 57.29578f  //弧度to角度(180/PI)
 #define L1_UP    0.21    //大腿长度m
 #define L2_Down  0.25    //小腿长度m
+
+//超出标定范围外推:拟合所用末尾有效数据项数
+#define Out_Of_Range_Fit_Num 40
+
+//0:L   1:R
+//末尾Out_Of_Range_Fit_Num项有效数据拟合直线斜率(力矩/腿长)
+static float WheelLeg_SpringComp_K_Out_Of_Range[2];
+//有效数据(默认UP的末尾15个不可用)，在WheelLeg_SpringComp_Fit_K_Out_Of_Range中赋值
+static int16_t Encoder_Max[2];
+
+
 static Config_StructTypedef Config;
 
 static Motor_Compensation_Config_StructTypedef L0_Leg_L_Compensation_Config = 
@@ -119,8 +134,8 @@ static Motor_Compensation_Config_StructTypedef L0_Leg_L_Compensation_Config =
     .Caled_State = 0,
     .Start_State =Up,
 
-    .Compensation_Round = 1,
     .Compensation_Speed = 0.005,
+    .Compensation_Round = 1,
     .Compensation_Distance_UP = 0.348f,
     .Compensation_Distance_Down = 0.128,
     .Compensation_Distance_Range = 1,
@@ -129,7 +144,7 @@ static Motor_Compensation_Config_StructTypedef L0_Leg_L_Compensation_Config =
     
     .Friction_ACC = 20000,
     .Friction_DEC = 50000,
-    .Friction_K = 0,
+    .Friction_K = 1,
 
     .Leg_RL_State = Leg_L
 };
@@ -149,7 +164,7 @@ static Motor_Compensation_Config_StructTypedef L0_Leg_R_Compensation_Config =
     
     .Friction_ACC = 20000,
     .Friction_DEC = 50000,
-    .Friction_K = 0,
+    .Friction_K = 1,
 
     .Leg_RL_State = Leg_R
 };
@@ -178,12 +193,12 @@ static PID_Struct_TypeDef Leg_Angle_Speed_PID =
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 /**
  * ===| 氮气弹簧初始化 |===
  **/
 void WheelLeg_SpringComp_Init(void)
 {
-
 	for (uint16_t i = 0; i < 1024; i++)
 	{
 		memcpy(&((uint64_t *)(Config.L0_Leg_L_Cal_Data))[i], (uint32_t *)(0x08000000 + 2048 * (100 + 128) + 8 * i), 8);
@@ -192,23 +207,26 @@ void WheelLeg_SpringComp_Init(void)
     {
         memcpy(&((uint64_t *)(Config.L0_Leg_R_Cal_Data))[i], (uint32_t *)(0x08000000 + 2048*(104+128) + 8*i), 8);
     }
+	WheelLeg_SpringComp_K_Out_Of_Range[Leg_L] = WheelLeg_SpringComp_Fit_K_Out_Of_Range(Config.L0_Leg_L_Cal_Data, L0_Leg_L_Compensation_Config);
+	WheelLeg_SpringComp_K_Out_Of_Range[Leg_R] = WheelLeg_SpringComp_Fit_K_Out_Of_Range(Config.L0_Leg_R_Cal_Data, L0_Leg_R_Compensation_Config);
 }
 
 /**
  * ===| 氮气弹簧补偿 |===
  * @param Leg_Length_Feedback---当前腿长
+ * @param Leg_Length_Target-----目标腿长
  * @param GasSpring_Output------[out]输出补偿力矩(沿腿方向)
  * @param Leg_LR----------------0:左腿(Leg_L)，1:右腿(Leg_R)
  **/
-void WheelLeg_SpringComp(float Leg_Length_Feedback,float *GasSpring_Output,uint8_t Leg_LR)
+void WheelLeg_SpringComp(float Leg_Length_Feedback,float Leg_Length_Target,float *GasSpring_Output,uint8_t Leg_LR)
 {
     if(Leg_LR == Leg_L)
     {
-        *GasSpring_Output = Motor_Compensation_Get_Data(Leg_Length_Feedback, -1.0f, &L0_Leg_L_Compensation_Config);
+        *GasSpring_Output = Motor_Compensation_Get_Data(Leg_Length_Feedback, Leg_Length_Target-Leg_Length_Feedback, &L0_Leg_L_Compensation_Config);
     }
     else if(Leg_LR == Leg_R)
     {
-        *GasSpring_Output = Motor_Compensation_Get_Data(Leg_Length_Feedback, -1.0f, &L0_Leg_R_Compensation_Config);
+        *GasSpring_Output = Motor_Compensation_Get_Data(Leg_Length_Feedback, Leg_Length_Target-Leg_Length_Feedback, &L0_Leg_R_Compensation_Config);
     }
     else
     {
@@ -245,8 +263,7 @@ void WheelLeg_SpringComp(float Leg_Length_Feedback,float *GasSpring_Output,uint8
  * 
  * @param Leg_LR-----------------0:左腿(Leg_L)，1:右腿(Leg_R)
  * @param Enable_Output----------使能输出指针，volatile uint8_t*
- * @param Fun_Motor_Joint_Output-关节电机输出函数指针，参数依次为关节1、2、3、4的力矩
- * @param Fun_Motor_Wheel_Output-轮电机输出函数指针，参数依次为左轮、右轮
+ * @param Fun_Motor_Joint_Wheel_Output-关节电机输出函数指针，参数依次为关节1、2、3、4和左轮、右轮的力矩
  * @param Motor1-----------------电机1数据
  * @param Motor2-----------------电机2数据
  * @param Motor3-----------------电机3数据
@@ -259,8 +276,7 @@ void WheelLeg_SpringComp(float Leg_Length_Feedback,float *GasSpring_Output,uint8
 uint8_t WheelLeg_SpringComp_Measure_Task
 (const uint8_t Leg_LR,
 const volatile uint8_t * const Enable_Output,
-void (* const Fun_Motor_Joint_Output)(float,float,float,float),
-void (* const Fun_Motor_Wheel_Output)(float,float),
+void (* const Fun_Motor_Joint_Wheel_Output)(float,float,float,float,float,float),
 const volatile Motor_Data_StructTypeDef * const Motor1,
 const volatile Motor_Data_StructTypeDef * const Motor2,
 const volatile Motor_Data_StructTypeDef * const Motor3,
@@ -277,13 +293,14 @@ if(Leg_LR==Leg_L)
     //校准参数初始化
     L0_Leg_L_Compensation_Config.Caled_State = 0;
     L0_Leg_L_Compensation_Config.Compensation_Round = 1;
+
     if(L0_Leg_L_Compensation_Config.Start_State == Up)
     L0_Leg_L_Compensation_Config.Distance_Target = L0_Leg_L_Compensation_Config.Compensation_Distance_UP;
     else
     L0_Leg_L_Compensation_Config.Distance_Target = L0_Leg_L_Compensation_Config.Compensation_Distance_Down;
     //PID参数初始化
 	PID_Init(&L0_Leg_L_Compensation_Config.Distance_PID, 	10.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
-	PID_Init(&L0_Leg_L_Compensation_Config.Speed_PID, 	    200.0f, 1.0f, 0.0f, 200.0f, 250.0f, 250.0f);
+	PID_Init(&L0_Leg_L_Compensation_Config.Speed_PID, 	    80.0f, 5.0f, 0.0f, 0.0f, 250.0f, 250.0f);
 
     //清空原先的校准数据
     for(uint16_t i = 0; i < 2*Point_Num; i++) L0_Leg_L_Compensation_Config.Data[i] = 0; 
@@ -312,14 +329,12 @@ if(Leg_LR==Leg_L)
             //电管底盘失能 关节电机也失能
             if( *Enable_Output == 0)
             {
-                Fun_Motor_Joint_Output(0, 0, 0, 0, 0);
-                Fun_Motor_Wheel_Output(0,0);
+                Fun_Motor_Joint_Wheel_Output(0, 0, 0, 0, 0, 0);
                 return 0;
             }		
             else
             {
-                Fun_Motor_Joint_Output(L0_Leg_L_Compensation_Config.T_Target[0], L0_Leg_L_Compensation_Config.T_Target[1], 0, 0);
-                Fun_Motor_Wheel_Output(0,0);
+                Fun_Motor_Joint_Wheel_Output(L0_Leg_L_Compensation_Config.T_Target[0], L0_Leg_L_Compensation_Config.T_Target[1], 0, 0, 0, 0);
             }
 
         }
@@ -347,7 +362,7 @@ else if(Leg_LR==Leg_R)
     L0_Leg_R_Compensation_Config.Distance_Target = L0_Leg_R_Compensation_Config.Compensation_Distance_Down;
     //PID参数初始化
 	PID_Init(&L0_Leg_R_Compensation_Config.Distance_PID, 	10.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
-	PID_Init(&L0_Leg_R_Compensation_Config.Speed_PID, 	    200.0f, 1.0f, 0.0f, 200.0f, 250.0f, 250.0f);
+	PID_Init(&L0_Leg_R_Compensation_Config.Speed_PID, 	    80.0f, 5.0f, 0.0f, 0.0f, 250.0f, 250.0f);
 
     //清空原先的校准数据
     for(uint16_t i = 0; i < 2*Point_Num; i++) L0_Leg_R_Compensation_Config.Data[i] = 0; 
@@ -378,14 +393,12 @@ else if(Leg_LR==Leg_R)
             //电管底盘失能 关节电机也失能
             if( *Enable_Output == 0)
             {
-                Fun_Motor_Joint_Output(0, 0, 0, 0, 0);
-                Fun_Motor_Wheel_Output(0,0);
+                Fun_Motor_Joint_Wheel_Output(0, 0, 0, 0, 0, 0);
                 return 0;
             }		
             else
             {
-                Fun_Motor_Joint_Output(0, 0, L0_Leg_R_Compensation_Config.T_Target[1], L0_Leg_R_Compensation_Config.T_Target[0]);
-                Fun_Motor_Wheel_Output(0,0);
+                Fun_Motor_Joint_Wheel_Output(0, 0, L0_Leg_R_Compensation_Config.T_Target[1], L0_Leg_R_Compensation_Config.T_Target[0], 0, 0);
             }
 
         }
@@ -545,23 +558,26 @@ static void Motor_Compensation(Motor_Compensation_Config_StructTypedef *Config)
 {
     if(Config->Caled_State <= 1)
     {
-
-
-        if(fabsf(Config->Distance_Target - Config->Distance_Feedback) < Config->Compensation_Distance_Range*0.01)
+        
+        //目标值增减
+        if(fabsf(Config->Distance_Target - Config->Distance_Feedback) <= Config->Compensation_Distance_Range*0.01f
+        ||((Config->Caled_State == 0)?1:-1)*(Config->Distance_Target - Config->Distance_Feedback) * Config->Start_State<0.0f)
         {
             //串级PID定速正反转(0正传，1反转)
-            if     (Config->Caled_State == 0) Config->Distance_Target += 0.001f * Config->Compensation_Speed * Config->Start_State;
-            else if(Config->Caled_State == 1) Config->Distance_Target -= 0.001f * Config->Compensation_Speed * Config->Start_State;
+            if     (Config->Caled_State == 0) Config->Distance_Target += Config->Dt * Config->Compensation_Speed * Config->Start_State;
+            else if(Config->Caled_State == 1) Config->Distance_Target -= Config->Dt * Config->Compensation_Speed * Config->Start_State;
         }
-        
+
         if(Config->Start_State == Up)
         {
+            //检测正反转改变
             if     (Config->Distance_Target  <= Config->Compensation_Distance_Down  && Config->Caled_State == 0) {Config->Caled_State = 1;}
             else if(Config->Distance_Target  >= Config->Compensation_Distance_UP    && Config->Caled_State == 1) {Config->Caled_State = 0; Config->Compensation_Round--;}
             if(Config->Compensation_Round <= 0) {Config->Caled_State = 2; return;}
         }
         else
         {
+            //检测正反转改变
             if     (Config->Distance_Target >= Config->Compensation_Distance_UP   && Config->Caled_State == 0) {Config->Caled_State = 1;}
             else if(Config->Distance_Target <= Config->Compensation_Distance_Down && Config->Caled_State == 1) {Config->Caled_State = 0; Config->Compensation_Round--;}
             if(Config->Compensation_Round <= 0) {Config->Caled_State = 2; return;}
@@ -576,7 +592,7 @@ static void Motor_Compensation(Motor_Compensation_Config_StructTypedef *Config)
         if(Encoder < 0) Encoder += Point_Num;
         
         //保存校准值(正转保存在数据数组前半部分，反转在后半部分)
-        if(fabsf(Config->Distance_PID.Error) <= 5.0f)
+        if(fabsf(Config->Distance_PID.Error) < Config->Compensation_Distance_Range*0.008f)
         {
             if(Config->Caled_State == 0) Config->Data[Encoder]           = 0.4f*Config->Data[Encoder]             + 0.6f*Config->Current_Output;
             if(Config->Caled_State == 1) Config->Data[Encoder+Point_Num] = 0.4f*Config->Data[Encoder+Point_Num]   + 0.6f*Config->Current_Output;
@@ -584,19 +600,61 @@ static void Motor_Compensation(Motor_Compensation_Config_StructTypedef *Config)
     }
 }
 
-static float Motor_Compensation_Get_Data(float Distance, float Speed, Motor_Compensation_Config_StructTypedef *Config)
+static float Motor_Compensation_Get_Data(float Distance, float Error, Motor_Compensation_Config_StructTypedef *Config)
 {
-    Limit_float(&Distance, Config->Compensation_Distance_UP, Config->Compensation_Distance_Down);
-    int16_t Encoder = fmodf(Distance, Config->Compensation_Distance_Range) * Point_Num / Config->Compensation_Distance_Range;
+    float Distance_Limit = Distance;
+    Limit_float(&Distance_Limit, Config->Compensation_Distance_UP, Config->Compensation_Distance_Down);
+    int16_t Encoder = fmodf(Distance_Limit, Config->Compensation_Distance_Range) * Point_Num / Config->Compensation_Distance_Range;
     if(Encoder < 0) Encoder += Point_Num; 
+
+    if(Encoder>Encoder_Max[Config->Leg_RL_State]) Encoder = Encoder_Max[Config->Leg_RL_State];
 
     float Coggin_Torque = Config->Data[Encoder];
     float Friction_Torque_Target = 0.0f;
-    if(Speed > 0)       Friction_Torque_Target = Config->Friction_K * Config->Data[Encoder+Point_Num];
-    else if(Speed < 0)  Friction_Torque_Target = -Config->Friction_K * Config->Data[Encoder+Point_Num];
-    
+    float Error_K = 4.0f*fabsf(Error/(Config->Compensation_Distance_UP-Config->Compensation_Distance_Down));
+    Limit_float(&Error_K,Config->Friction_K,0.0f);
+    if(Error > 0)       Friction_Torque_Target =  Config->Data[Encoder+Point_Num] * Error_K * Config->Start_State;
+    else if(Error < 0)  Friction_Torque_Target = -Config->Data[Encoder+Point_Num] * Error_K * Config->Start_State;
     // Acc_Slow(Friction_Torque_Target, &Config->Friction_Out, Config->Friction_ACC, Config->Friction_DEC, Dt);
+
+    float Out_Of_Range_Torque = 0.0f;
+    if(Distance>Config->Compensation_Distance_UP)
+    {
+        //超出标定范围的部分按末尾有效数据拟合的斜率线性外推补偿
+        Out_Of_Range_Torque = WheelLeg_SpringComp_K_Out_Of_Range[Config->Leg_RL_State] * (Distance - Distance_Limit);
+    }
     
-    return (Coggin_Torque + Config->Friction_Out);
+
+    return (Coggin_Torque + Friction_Torque_Target + Out_Of_Range_Torque);
 }
 
+/**
+ * ===| 拟合末尾有效数据得到超出标定范围的外推斜率 |===
+ **/
+static float WheelLeg_SpringComp_Fit_K_Out_Of_Range(const float *Cal_Data,Motor_Compensation_Config_StructTypedef Config)
+{
+    Encoder_Max[Config.Leg_RL_State] = fmodf(Config.Compensation_Distance_UP, Config.Compensation_Distance_Range) * Point_Num / Config.Compensation_Distance_Range -15;
+    int16_t Encoder_Min = fmodf(Config.Compensation_Distance_Down, Config.Compensation_Distance_Range) * Point_Num / Config.Compensation_Distance_Range;
+    
+    double Sum_X = 0.0, Sum_Y = 0.0, Sum_XX = 0.0, Sum_XY = 0.0;
+    uint16_t Num = 0;
+
+    //有效数据区间为[Encoder_Min,Encoder_Max]，从区间末尾向前取 Out_Of_Range_Fit_Num 项
+    //标定过程中未被采样到的点保持为0，不计入拟合
+    for (int16_t i = Encoder_Max[Config.Leg_RL_State]; i >= Encoder_Min && Num < Out_Of_Range_Fit_Num; i--)
+    {
+        if (Cal_Data[i] == 0.0f) continue;
+        double X = (double)i * Config.Compensation_Distance_Range / (double)Point_Num;
+        double Y = Cal_Data[i];
+        Sum_X  += X;
+        Sum_Y  += Y;
+        Sum_XX += X * X;
+        Sum_XY += X * Y;
+        Num++;
+    }
+
+    if (Num < 2) return 0.0f;
+    double Denominator = (double)Num * Sum_XX - Sum_X * Sum_X;
+    if (Denominator == 0.0) return 0.0f;
+    return (float)(((double)Num * Sum_XY - Sum_X * Sum_Y) / Denominator);
+}
