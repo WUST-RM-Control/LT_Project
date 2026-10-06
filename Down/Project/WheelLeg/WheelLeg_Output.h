@@ -4,45 +4,6 @@
 #include "main.h"
 
 
-// 单条腿最终关节输出 
-typedef struct
-{
-    // VMC数学坐标下的力矩 
-    float tau_phi1_nm;          // Back
-    float tau_phi4_nm;          // Front
-
-    // 映射到真实电机坐标，并经过最终限幅 的目标力矩
-    float back_target_nm;
-    float front_target_nm;
-
-    //准备发送的力矩
-    float back_command_nm;
-    float front_command_nm;
-
-    //执行器状态
-    uint8_t enable_request;     // 是否希望这条腿的关节电机 Enable
-    uint8_t enable_sent;        // 是否执行过 Enable 命令
-    uint8_t ready;              // 两个关节是否已经具备输出条件
-    uint8_t fault;              // 关节异常
-
-    uint8_t valid;
-
-} WheelLeg_Output_Leg;
-
-
-// 整个关节输出
-typedef struct
-{
-    WheelLeg_Output_Leg left;
-    WheelLeg_Output_Leg right;
-
-    // 关节最终力矩限制 
-    float torque_limit_nm;
-
-} WheelLeg_Output;
-
-
-extern WheelLeg_Output wheelLeg_output;
 
 
 void WheelLeg_Output_Init(void);

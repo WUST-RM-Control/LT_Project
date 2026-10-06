@@ -49,44 +49,18 @@
 /*===| 底盘电机通信相关定义 |===*/
 #define Chassis_DriverMotor_CAN          	    hfdcan2     //轮电机CAN        
 #define Chassis_DriverMotor_Send_CAN_ID         0x200       //轮电机CAN发送ID
-#define Chassis_Motor1_Feedback_CAN_ID          0x203       //轮电机1CAN反馈ID 	
-#define Chassis_Motor2_Feedback_CAN_ID      	0x204       //轮电机2CAN反馈ID
+#define Chassis_Motor1_Feedback_CAN_ID          0x203       //左腿轮电机1CAN反馈ID 	
+#define Chassis_Motor2_Feedback_CAN_ID      	0x204       //右腿轮电机2CAN反馈ID
 
 #define Chassis_JointMotor_CAN					hfdcan1            			   
-#define Chassis_JointMotor1_Send_CAN_ID			0x02
-#define Chassis_JointMotor1_Feedback_ID			0x12
-#define Chassis_JointMotor2_Send_CAN_ID			0x01
-#define Chassis_JointMotor2_Feedback_ID			0x11
-#define Chassis_JointMotor3_Send_CAN_ID			0x03
-#define Chassis_JointMotor3_Feedback_ID			0x13
-#define Chassis_JointMotor4_Send_CAN_ID			0x04
-#define Chassis_JointMotor4_Feedback_ID			0x14
-	
-/*===| 云台电机通信相关定义 |===*/
-    #define Gimbal_Pitch_CAN                    hfdcan2   //Pitch_使用的CAN
-    #define Gimbal_Pitch_Send_CAN_ID            0x1FE    //Pitch_CAN发送ID
-    #define Gimbal_Pitch_Feedback_CAN_ID        0x205    //Pitch_CAN反馈ID
-    
-    #define Gimbal_Yaw_CAN                      hfdcan3    //Yaw_使用的CAN
-    #define Gimbal_Yaw_Send_CAN_ID              0x1FF    //Yaw_CAN发送ID
-    #define Gimbal_Yaw_Feedback_CAN_ID          0x206   //Yaw_CAN反馈ID
-
-/*===| 发射电机通信相关定义 |===*/
-    #define Shoot_Fric_First_CAN                      hfdcan3    //Fric_使用的CAN
-    #define Shoot_Fric_First_Send_CAN_ID              0x200    //Fric_CAN发送ID
-    #define Shoot_Fric_First_Right_Feedback_CAN_ID    0x202    //前右Fric_CAN反馈ID
-    #define Shoot_Fric_First_Left_Feedback_CAN_ID     0x201    //前左Fric_CAN反馈ID
-    #define Shoot_Fric_First_Middle_Feedback_CAN_ID   0x203    //前中Fric_CAN反馈ID
-    
-    #define Shoot_Fric_Second_CAN                      hfdcan3    //Fric_使用的CAN
-    #define Shoot_Fric_Second_Send_CAN_ID              0x1FF    //Fric_CAN发送ID
-    #define Shoot_Fric_Second_Right_Feedback_CAN_ID    0x206    //前右Fric_CAN反馈ID
-    #define Shoot_Fric_Second_Left_Feedback_CAN_ID     0x207    //前左Fric_CAN反馈ID
-    #define Shoot_Fric_Second_Middle_Feedback_CAN_ID   0x208    //前中Fric_CAN反馈ID
-
-    #define Shoot_Trigger_CAN                   hfdcan2    //Trigger_使用的CAN
-    #define Shoot_Trigger_Send_CAN_ID           0x1FF    //Trigger_CAN发送ID
-    #define Shoot_Trigger_Feedback_CAN_ID       0x205    //Trigger_CAN反馈ID
+#define Chassis_JointMotor1_Send_CAN_ID			0x02    //左腿车头电机
+#define Chassis_JointMotor1_Feedback_ID			0x12    //左腿车头电机
+#define Chassis_JointMotor2_Send_CAN_ID			0x01    //左腿车尾电机
+#define Chassis_JointMotor2_Feedback_ID			0x11    //左腿车尾电机
+#define Chassis_JointMotor3_Send_CAN_ID			0x03    //右腿车头电机
+#define Chassis_JointMotor3_Feedback_ID			0x13    //右腿车头电机
+#define Chassis_JointMotor4_Send_CAN_ID			0x04    //右腿车尾电机
+#define Chassis_JointMotor4_Feedback_ID			0x14    //右腿车尾电机
 
 /*===| 超电通信相关定义 |==*/
     #define SuperCap_CAN                        hfdcan1     //hcan1

@@ -1,32 +1,303 @@
+/**
+ * @file    WheelLeg_Output.c[底盘发送电机电流]
+ * @brief   LQR控制下传入期望力矩和腿长数据(Feedback和Target)和VMC数据，自动完成关节电机和轮毂电机的电流发送(耗时1ms)
+ * @details 关节电机到达限幅：关机两电机等比例限幅，保证虚拟力正确
+ *          
+ */
 #include "WheelLeg_Output.h"
-
-#include "WheelLeg_VMC.h"
-
-#include <math.h>
-
-#include "WheelLeg_Motor.h"
 #include "Motor_DAMIAO_Driver.h"
-#include "Define.h"
+#include "<math>.h"
 
-WheelLeg_Output wheelLeg_output = {0};
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//内部结构体定义
 
-#define LEFT_BACK_TORQUE_DIRECTION      (-1.0f)
-#define LEFT_FRONT_TORQUE_DIRECTION     (-1.0f)
+// 单条腿最终关节输出 
+typedef struct
+{
+//Leg
 
-#define RIGHT_BACK_TORQUE_DIRECTION     ( 1.0f)
-#define RIGHT_FRONT_TORQUE_DIRECTION    ( 1.0f)
+    /*===| VMC控关节PID参数 |===*/
+    //腿摆角位置环PID
+    PID_Struct_TypeDef Leg_Angle_PID;
+    //腿摆角速度环PID
+    PID_Struct_TypeDef Leg_Angle_Speed_PID;
+    //腿长位置环PID
+    PID_Struct_TypeDef Leg_Length_PID;
+    //腿长速度环PID
+    PID_Struct_TypeDef Leg_Length_Speed_PID;
 
-#define WHEELLEG_OUTPUT_TORQUE_LIMIT_NM    20.0f
-// 关节力矩变化速度限制
-#define WHEELLEG_OUTPUT_TORQUE_SLEW_NM_S   20.0f
+//Motor
+    //关节电机力矩的期望力矩NM(未限幅)
+    //车头
+    float Motor_Target_Torque13;
+    float Motor_Target_Torque24;   //车尾
 
-//按比例限幅
+    //关节电机力矩的发送力矩NM(限幅)
+    //车头
+    float Motor_Send_Torque13;
+    float Motor_Send_Torque24;   //车尾
+
+    //轮电机发送扭矩
+    float Motor_Send_Torque;
+
+} WheelLeg_Output_Leg_StructTypedef;
+
+// 整个关节输出
+typedef struct
+{
+//Leg
+    WheelLeg_Output_Leg_StructTypedef Leg_Left;
+    WheelLeg_Output_Leg_StructTypedef Leg_Right;
+
+} WheelLeg_Output_StructTypedef;
+
+
+//关节电机限幅
+#define WheelLeg_Joint_Output_Torque_Limit_NM    40.0f
+//轮电机扭矩to电流
+#define WheelLeg_Wheel_Output_Current2Torque     3.138094644e+3f
+
+static WheelLeg_Output_StructTypedef WheelLeg_Output_Struct;
+
+
+//按比例限幅一对关节电机力矩
+static void WheelLeg_Output_LimitPair(float *back_nm,float *front_nm,float limit_nm);
+//发送电机电流，有1ms阻塞(等待修改fdcan接线后去掉)
+static void WheelLeg_Output_Motor_Send_Current(const float Joint1, const float Joint2, const float Joint3, const float Joint4, const float Wheel_Left,const float Wheel_Right);
+
+/**
+ * @brief ===| PID控制的初始化 |===
+ **/
+void WheelLeg_Output_Init(void)
+{
+    //腿摆角位置环PID
+	PID_Init(&WheelLeg_Output_Struct.Leg_Left.Leg_Angle_PID,    80.0f,  0.0f,  	150.0f, 0.0f, 	0.0f,  	150.0f);
+	PID_Init(&WheelLeg_Output_Struct.Leg_Right.Leg_Angle_PID,   80.0f,  0.0f,  	150.0f, 0.0f, 	0.0f,  	150.0f);
+	//腿摆角速度环PID
+	PID_Init(&WheelLeg_Output_Struct.Leg_Left.Leg_Angle_Speed_PID,  0.1f, 	0.0f,  	0.0f,   0.15f, 	0.0f,  	30.0f);
+	PID_Init(&WheelLeg_Output_Struct.Leg_Right.Leg_Angle_Speed_PID, 0.1f, 	0.0f,  	0.0f,   0.15f, 	0.0f,  	30.0f);
+	//腿长位置环PID
+	PID_Init(&WheelLeg_Output_Struct.Leg_Left.Leg_Length_PID,   20.0f, 	0.0f, 	500.0f, 	0.0f, 	0.0f, 	3.0f);
+	PID_Init(&WheelLeg_Output_Struct.Leg_Right.Leg_Length_PID,  20.0f, 	0.0f, 	500.0f, 	0.0f, 	0.0f, 	3.0f);
+	//腿长速度环PID
+	PID_Init(&WheelLeg_Output_Struct.Leg_Left.Leg_Length_Speed_PID, 100.0f, 0.4f, 	0.0f, 	30.0f, 20.0f, 50.0f);
+	PID_Init(&WheelLeg_Output_Struct.Leg_Right.Leg_Length_Speed_PID,100.0f, 0.4f, 	0.0f, 	30.0f, 20.0f, 50.0f);
+
+}
+
+
+/**
+ * @brief ===| 电机电流输出 |===
+ * 
+ * @attention 本函数内部有1ms阻塞(等待修改fdcan接线后去掉)
+ * @attention 未考虑轮电机的限速
+ * 
+ * @note 参数注意：
+ * @note 裁判主控一侧为车头，灯条一侧为车尾，以车为参考，左手边为左腿
+ * @note 腿在相对机体垂直、竖直向下时腿总摆角为0°+N*360°
+ * @note 左腿从左看逆时针为正方向(力和摆角都是)
+ * @note 右腿从右看逆时针为正方向(力和摆角都是)
+ * @note 沿杆的力伸腿方向为正方向
+ * 
+ * @note 注意Jt_Left和Jt_Right矩阵的正确
+ * @note 关节电机对应关系:关节1(左腿车头)、关节2(左腿车尾)、关节3(右腿车头)、关节4(右腿车尾)
+ * @note //VMC:虚拟腿力/力矩经Jt映射成关节电机力矩(Jt行0为后关节，行1为前关节)
+ * @note WheelLeg_Output_Struct.Leg_Left.Motor_Send_Torque13  = Jt_Left[0][0]  * Leg_Left_Link_F  + Jt_Left[0][1]  * Leg_Left_Angle_Torque;
+ * @note WheelLeg_Output_Struct.Leg_Left.Motor_Send_Torque24   = Jt_Left[1][0]  * Leg_Left_Link_F  + Jt_Left[1][1]  * Leg_Left_Angle_Torque;
+ * @note WheelLeg_Output_Struct.Leg_Right.Motor_Send_Torque13 = Jt_Right[0][0] * Leg_Right_Link_F + Jt_Right[0][1] * Leg_Right_Angle_Torque;
+ * @note WheelLeg_Output_Struct.Leg_Right.Motor_Send_Torque24  = Jt_Right[1][0] * Leg_Right_Link_F + Jt_Right[1][1] * Leg_Right_Angle_Torque;
+ * 
+ * @note 说明：
+ * @note Control_State==0:关节电机和轮电机电流全部输出0，函数直接返回0
+ * @note Control_State==1:摆角串级PID生效；腿长串级PID生效
+ * @note Control_State==2:摆角串级PID不生效，摆角力矩只保留Angle_Torque_NM_Add前馈；腿长串级PID仍然生效
+ * @note 虚拟力/力矩经Jt映射成关节电机力矩，每条腿的两个关节按相同比例限幅(WheelLeg_Joint_Output_Torque_Limit_NM)，保证虚拟力方向不变
+ * @note Jt_Left/Jt_Right为VMC转置雅可比，直接完成[沿杆的力,摆角力矩]到[后关节,前关节]电机力矩的映射，方向、极性已包含在Jt中，本函数不再乘方向系数
+ * 
+ * @note 使用：
+ * @note 先调用WheelLeg_Output_Init完成PID初始化
+ * @note 放在底盘控制周期的最后，传入本周期解算出的雅可比、状态量和期望虚拟力/力矩
+ * @note 关节电机实际输出力矩已由本函数限幅,期望虚拟力/力矩 = Add前馈 + K_PID_Control_Weight × PID输出
+ * 
+ * @param Control_State------------------------0:失能，1:失能且需要PID控制摆角，2:失能且不需要PID控制摆角
+ * @param Leg_Left_Link_F_N_Add----------------左腿沿杆的力(伸腿方向为正方向)
+ * @param Leg_Left_Angle_Torque_NM_Add---------左腿摆角方向的力矩
+ * @param Leg_Right_Link_F_N_Add---------------右腿沿杆的力(伸腿方向为正方向)
+ * @param Leg_Right_Angle_Torque_NM_Add--------右腿摆角方向的力矩
+ * @param Leg_Left_L_Target--------------------左腿目标腿长(m)
+ * @param Leg_Left_L_Feedback------------------左腿当前腿长反馈(m)
+ * @param Leg_Left_L_Speed_Feedback------------左腿当前腿长速度反馈(m/s)
+ * @param Leg_Left_Total_Angle_Target----------左腿目标总摆角(°)
+ * @param Leg_Left_Total_Angle_Feedback--------左腿当前总摆角反馈(°)
+ * @param Leg_Left_Total_Angle_Speed_Feedback--左腿当前总摆角速度反馈(°/s)
+ * @param Leg_Right_L_Target-------------------右腿目标腿长(m)
+ * @param Leg_Right_L_Feedback-----------------右腿当前腿长反馈(m)
+ * @param Leg_Right_L_Speed_Feedback-----------右腿当前腿长速度反馈(m/s)
+ * @param Leg_Right_Total_Angle_Target---------右腿目标总摆角(°)
+ * @param Leg_Right_Total_Angle_Feedback-------右腿当前总摆角反馈(°)
+ * @param Leg_Right_Total_Angle_Speed_Feedback-右腿当前总摆角速度反馈(°/s)
+ * @param K_PID_Control_Weight-----------------腿长腿摆角PID计算输出的权重系数(Output=PID输出*系数+Add)
+ * @param Jt_Left------------------------------左腿VMC转置雅可比[2][2]
+ * @param Jt_Right-----------------------------右腿VMC转置雅可比[2][2]
+ * @param Wheel_Left_Torque--------------------左轮电机扭矩
+ * @param Wheel_Right_Torque-------------------右轮电机扭矩
+ * 
+ * @return 1：输出电流
+ * @return 0：输出0
+ * @return -1：Control_State非法，已输出0
+ **/
+int8_t WheelLeg_Output
+(const uint8_t Control_State,
+
+const float Leg_Left_Link_F_N_Add,
+const float Leg_Left_Angle_Torque_NM_Add,
+const float Leg_Right_Link_F_N_Add,
+const float Leg_Right_Angle_Torque_NM_Add,
+
+const float Leg_Left_L_Target,
+const float Leg_Left_L_Feedback,
+const float Leg_Left_L_Speed_Feedback,
+const float Leg_Left_Total_Angle_Target,
+const float Leg_Left_Total_Angle_Feedback,
+const float Leg_Left_Total_Angle_Speed_Feedback,
+const float Leg_Right_L_Target,
+const float Leg_Right_L_Feedback,
+const float Leg_Right_L_Speed_Feedback,
+const float Leg_Right_Total_Angle_Target,
+const float Leg_Right_Total_Angle_Feedback,
+const float Leg_Right_Total_Angle_Speed_Feedback,
+
+const float K_PID_Control_Weight,
+
+const float Jt_Left[2][2],
+const float Jt_Right[2][2],
+
+const float Wheel_Left_Torque,
+const float Wheel_Right_Torque
+)
+{
+
+    //赋个值
+    WheelLeg_Output_Struct.Leg_Left.Motor_Send_Torque13 = Wheel_Left_Torque;
+    WheelLeg_Output_Struct.Leg_Right.Motor_Send_Torque13 = Wheel_Right_Torque;
+
+    //虚拟腿期望力/力矩(沿杆的力、摆角力矩)
+    float Leg_Left_Link_F;
+    float Leg_Left_Angle_Torque;
+    float Leg_Right_Link_F;
+    float Leg_Right_Angle_Torque;
+
+    //PID输出(摆角PID不生效时保持为0)
+    float Leg_Left_PID_Link_F = 0.0f;
+    float Leg_Left_PID_Angle_Torque = 0.0f;
+    float Leg_Right_PID_Link_F = 0.0f;
+    float Leg_Right_PID_Angle_Torque = 0.0f;
+
+    //失能:关节电机和轮电机电流全部输出0
+    if(Control_State == 0)
+    {
+        WheelLeg_Output_Struct.Leg_Left.Leg_Length_PID.I_Output = 0.0f;
+        WheelLeg_Output_Struct.Leg_Left.Leg_Length_Speed_PID.I_Output = 0.0f;
+        WheelLeg_Output_Struct.Leg_Left.Leg_Angle_PID.I_Output = 0.0f;
+        WheelLeg_Output_Struct.Leg_Left.Leg_Angle_Speed_PID.I_Output = 0.0f;
+        
+        WheelLeg_Output_Struct.Leg_Right.Leg_Length_PID.I_Output = 0.0f;
+        WheelLeg_Output_Struct.Leg_Right.Leg_Length_Speed_PID.I_Output = 0.0f;
+        WheelLeg_Output_Struct.Leg_Right.Leg_Angle_PID.I_Output = 0.0f;
+        WheelLeg_Output_Struct.Leg_Right.Leg_Angle_Speed_PID.I_Output = 0.0f;
+
+        WheelLeg_Output_Motor_Send_Current(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+        return 0;
+    }
+
+    //状态非法:不输出，防止误用
+    if(Control_State > 2)
+    {
+        WheelLeg_Output_Struct.Leg_Left.Leg_Length_PID.I_Output = 0.0f;
+        WheelLeg_Output_Struct.Leg_Left.Leg_Length_Speed_PID.I_Output = 0.0f;
+        WheelLeg_Output_Struct.Leg_Left.Leg_Angle_PID.I_Output = 0.0f;
+        WheelLeg_Output_Struct.Leg_Left.Leg_Angle_Speed_PID.I_Output = 0.0f;
+        
+        WheelLeg_Output_Struct.Leg_Right.Leg_Length_PID.I_Output = 0.0f;
+        WheelLeg_Output_Struct.Leg_Right.Leg_Length_Speed_PID.I_Output = 0.0f;
+        WheelLeg_Output_Struct.Leg_Right.Leg_Angle_PID.I_Output = 0.0f;
+        WheelLeg_Output_Struct.Leg_Right.Leg_Angle_Speed_PID.I_Output = 0.0f;
+
+        WheelLeg_Output_Motor_Send_Current(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+        return -1;
+    }
+
+    //腿长串级PID:位置外环输出目标腿长速度，速度内环输出虚拟腿力
+    PID_Position_Calculate(&WheelLeg_Output_Struct.Leg_Left.Leg_Length_PID,        Leg_Left_L_Target,                                      Leg_Left_L_Feedback);
+    PID_Position_Calculate(&WheelLeg_Output_Struct.Leg_Left.Leg_Length_Speed_PID,  WheelLeg_Output_Struct.Leg_Left.Leg_Length_PID.Output,  Leg_Left_L_Speed_Feedback);
+    PID_Position_Calculate(&WheelLeg_Output_Struct.Leg_Right.Leg_Length_PID,       Leg_Right_L_Target,                                     Leg_Right_L_Feedback);
+    PID_Position_Calculate(&WheelLeg_Output_Struct.Leg_Right.Leg_Length_Speed_PID, WheelLeg_Output_Struct.Leg_Right.Leg_Length_PID.Output, Leg_Right_L_Speed_Feedback);
+
+    Leg_Left_PID_Link_F  = WheelLeg_Output_Struct.Leg_Left.Leg_Length_Speed_PID.Output;
+    Leg_Right_PID_Link_F = WheelLeg_Output_Struct.Leg_Right.Leg_Length_Speed_PID.Output;
+
+    //摆角串级PID:位置外环输出目标摆角速度，速度内环输出虚拟摆角力矩(不需要PID控制摆角时不生效)
+    if(Control_State == 1)
+    {
+        PID_Position_Calculate(&WheelLeg_Output_Struct.Leg_Left.Leg_Angle_PID,        Leg_Left_Total_Angle_Target,                           Leg_Left_Total_Angle_Feedback);
+        PID_Position_Calculate(&WheelLeg_Output_Struct.Leg_Left.Leg_Angle_Speed_PID,  WheelLeg_Output_Struct.Leg_Left.Leg_Angle_PID.Output,  Leg_Left_Total_Angle_Speed_Feedback);
+        PID_Position_Calculate(&WheelLeg_Output_Struct.Leg_Right.Leg_Angle_PID,       Leg_Right_Total_Angle_Target,                          Leg_Right_Total_Angle_Feedback);
+        PID_Position_Calculate(&WheelLeg_Output_Struct.Leg_Right.Leg_Angle_Speed_PID, WheelLeg_Output_Struct.Leg_Right.Leg_Angle_PID.Output, Leg_Right_Total_Angle_Speed_Feedback);
+
+        Leg_Left_PID_Angle_Torque  = WheelLeg_Output_Struct.Leg_Left.Leg_Angle_Speed_PID.Output;
+        Leg_Right_PID_Angle_Torque = WheelLeg_Output_Struct.Leg_Right.Leg_Angle_Speed_PID.Output;
+    }
+    else
+    {
+        WheelLeg_Output_Struct.Leg_Left.Leg_Angle_PID.I_Output = 0.0f;
+        WheelLeg_Output_Struct.Leg_Left.Leg_Angle_Speed_PID.I_Output = 0.0f;
+        WheelLeg_Output_Struct.Leg_Right.Leg_Angle_PID.I_Output = 0.0f;
+        WheelLeg_Output_Struct.Leg_Right.Leg_Angle_Speed_PID.I_Output = 0.0f;
+    }
+
+    //期望虚拟力/力矩 = Add前馈 + K*PID输出(K_PID_Control_Weight用于PID权重和平滑切入)
+    Leg_Left_Link_F        = Leg_Left_Link_F_N_Add         + K_PID_Control_Weight * Leg_Left_PID_Link_F;
+    Leg_Right_Link_F       = Leg_Right_Link_F_N_Add        + K_PID_Control_Weight * Leg_Right_PID_Link_F;
+    Leg_Left_Angle_Torque  = Leg_Left_Angle_Torque_NM_Add  + K_PID_Control_Weight * Leg_Left_PID_Angle_Torque;
+    Leg_Right_Angle_Torque = Leg_Right_Angle_Torque_NM_Add + K_PID_Control_Weight * Leg_Right_PID_Angle_Torque;
+
+    //VMC:虚拟腿力/力矩经Jt映射成关节电机力矩(Jt行0为后关节，行1为前关节)
+    WheelLeg_Output_Struct.Leg_Left.Motor_Send_Torque13  = Jt_Left[0][0]  * Leg_Left_Link_F  + Jt_Left[0][1]  * Leg_Left_Angle_Torque;
+    WheelLeg_Output_Struct.Leg_Left.Motor_Send_Torque24  = Jt_Left[1][0]  * Leg_Left_Link_F  + Jt_Left[1][1]  * Leg_Left_Angle_Torque;
+    WheelLeg_Output_Struct.Leg_Right.Motor_Send_Torque13 = Jt_Right[0][0] * Leg_Right_Link_F + Jt_Right[0][1] * Leg_Right_Angle_Torque;
+    WheelLeg_Output_Struct.Leg_Right.Motor_Send_Torque24 = Jt_Right[1][0] * Leg_Right_Link_F + Jt_Right[1][1] * Leg_Right_Angle_Torque;
+
+    
+    WheelLeg_Output_Struct.Leg_Left.Motor_Send_Torque13  = Jt_Left[0][0]  * Leg_Left_Link_F  + Jt_Left[0][1]  * Leg_Left_Angle_Torque;
+    WheelLeg_Output_Struct.Leg_Left.Motor_Send_Torque24  = Jt_Left[1][0]  * Leg_Left_Link_F  + Jt_Left[1][1]  * Leg_Left_Angle_Torque;
+    WheelLeg_Output_Struct.Leg_Right.Motor_Send_Torque13 = Jt_Right[0][0] * Leg_Right_Link_F + Jt_Right[0][1] * Leg_Right_Angle_Torque;
+    WheelLeg_Output_Struct.Leg_Right.Motor_Send_Torque24 = Jt_Right[1][0] * Leg_Right_Link_F + Jt_Right[1][1] * Leg_Right_Angle_Torque;
+
+    //每条腿的两个关节按相同比例限幅，保证虚拟力方向不变
+    WheelLeg_Output_LimitPair(&WheelLeg_Output_Struct.Leg_Left.Motor_Send_Torque24, &WheelLeg_Output_Struct.Leg_Left.Motor_Send_Torque13, WheelLeg_Joint_Output_Torque_Limit_NM);
+    WheelLeg_Output_LimitPair(&WheelLeg_Output_Struct.Leg_Right.Motor_Send_Torque24, &WheelLeg_Output_Struct.Leg_Right.Motor_Send_Torque13, WheelLeg_Joint_Output_Torque_Limit_NM);
+
+    //发送关节电机力矩(关节1:左前 关节2:左后 关节3:右前 关节4:右后)，轮电机力矩由其他模块发送故传0
+    WheelLeg_Output_Motor_Send_Current(WheelLeg_Output_Struct.Leg_Left.Motor_Send_Torque13,
+                                       WheelLeg_Output_Struct.Leg_Left.Motor_Send_Torque24,
+                                       WheelLeg_Output_Struct.Leg_Right.Motor_Send_Torque13,
+                                       WheelLeg_Output_Struct.Leg_Right.Motor_Send_Torque24,
+                                       WheelLeg_Output_Struct.Leg_Left.Motor_Send_Torque13*WheelLeg_Wheel_Output_Current2Torque,
+                                       WheelLeg_Output_Struct.Leg_Right.Motor_Send_Torque13*WheelLeg_Wheel_Output_Current2Torque);
+
+    return 1;
+}
+
+//按比例限幅一对关节电机力矩
 static void WheelLeg_Output_LimitPair(float *back_nm,float *front_nm,float limit_nm)
 {
+//比较最大值
+    //关节电机绝对值
     float back_abs;
     float front_abs;
     float max_abs;
-    float scale;
+    
 
     back_abs = fabsf(*back_nm);
     front_abs = fabsf(*front_nm);
@@ -44,542 +315,38 @@ static void WheelLeg_Output_LimitPair(float *back_nm,float *front_nm,float limit
         return;
     }
 
-    //两个关节按相同比例缩小
+//超过限幅，两个关节按相同比例缩小
+    float scale;
     scale = limit_nm / max_abs;
 
     *back_nm *= scale;
     *front_nm *= scale;
 }
 
-static void WheelLeg_Output_SlewPair(
-    float target_back,
-    float target_front,
-    float *command_back,
-    float *command_front,
-    float slew_nm_s,
-    float dt)
+/**
+ * @brief 发送电机电流，有1ms阻塞(等待修改fdcan接线后去掉)
+ * 
+ * @note 灯条一侧为车尾
+ * @param Joint1 左前
+ * @param Joint2 左后
+ * @param Joint3 右前
+ * @param Joint4 右后
+ * @param Wheel_Left 
+ * @param Wheel_Right 
+ */
+static void WheelLeg_Output_Motor_Send_Current
+(const float Joint1, 
+const float Joint2, 
+const float Joint3, 
+const float Joint4, 
+const float Wheel_Left,
+const float Wheel_Right)
 {
-    float delta_back;
-    float delta_front;
-    float max_delta;
-    float max_step;
-    float scale;
-
-    // dt异常时不更新
-    if((dt <= 0.0f) || (!isfinite(dt)))
-    {
-        return;
-    }
-
-    // 防止偶发长周期造成一次力矩跳太大
-    if(dt > 0.05f)
-    {
-        dt = 0.05f;
-    }
-
-    max_step = slew_nm_s * dt;
-
-    delta_back =
-        target_back - *command_back;
-
-    delta_front =
-        target_front - *command_front;
-
-    max_delta = fabsf(delta_back);
-
-    if(fabsf(delta_front) > max_delta)
-    {
-        max_delta = fabsf(delta_front);
-    }
-
-    // 已经足够接近目标
-    if(max_delta <= max_step)
-    {
-        *command_back = target_back;
-        *command_front = target_front;
-        return;
-    }
-
-    // 两个关节按照同样比例接近目标
-    scale = max_step / max_delta;
-
-    *command_back += delta_back * scale;
-    *command_front += delta_front * scale;
+    Motor_DM_CMD_MIT(&Chassis_JointMotor_CAN, Chassis_JointMotor1_Send_CAN_ID, 0, 0, 0, 0, Joint1);
+    Motor_DM_CMD_MIT(&Chassis_JointMotor_CAN, Chassis_JointMotor2_Send_CAN_ID, 0, 0, 0, 0, Joint2);	
+    osDelay(1);
+    Motor_DM_CMD_MIT(&Chassis_JointMotor_CAN, Chassis_JointMotor3_Send_CAN_ID, 0, 0, 0, 0, Joint3);
+    Motor_DM_CMD_MIT(&Chassis_JointMotor_CAN, Chassis_JointMotor4_Send_CAN_ID, 0, 0, 0, 0, Joint4);
+    Motor_DJI_SendCurrent(&Chassis_DriverMotor_CAN,Chassis_DriverMotor_Send_CAN_ID,0,0,Wheel_Left,Wheel_Right);
 }
 
-//初始化
-void WheelLeg_Output_Init(void)
-{
-    wheelLeg_output.left.tau_phi1_nm = 0.0f;
-    wheelLeg_output.left.tau_phi4_nm = 0.0f;
-    wheelLeg_output.left.back_target_nm = 0.0f;
-    wheelLeg_output.left.front_target_nm = 0.0f;
-    wheelLeg_output.left.valid = 0;
-
-    wheelLeg_output.right.tau_phi1_nm = 0.0f;
-    wheelLeg_output.right.tau_phi4_nm = 0.0f;
-    wheelLeg_output.right.back_target_nm = 0.0f;
-    wheelLeg_output.right.front_target_nm = 0.0f;
-    wheelLeg_output.right.valid = 0;
-
-    wheelLeg_output.left.back_command_nm = 0.0f;
-    wheelLeg_output.left.front_command_nm = 0.0f;
-
-    wheelLeg_output.left.enable_request = 0;
-    wheelLeg_output.left.enable_sent = 0;
-    wheelLeg_output.left.ready = 0;
-    wheelLeg_output.left.fault = 0;
-
-    wheelLeg_output.right.back_command_nm = 0.0f;
-    wheelLeg_output.right.front_command_nm = 0.0f;
-
-    wheelLeg_output.right.enable_request = 0;
-    wheelLeg_output.right.enable_sent = 0;
-    wheelLeg_output.right.ready = 0;
-    wheelLeg_output.right.fault = 0;
-
-    wheelLeg_output.torque_limit_nm =WHEELLEG_OUTPUT_TORQUE_LIMIT_NM;
-}
-
-void WheelLeg_Output_UpdateTarget(void)
-{
-    float left_back;
-    float left_front;
-
-    float right_back;
-    float right_front;
-
-
-    // 默认无效 
-    wheelLeg_output.left.valid = 0;
-    wheelLeg_output.right.valid = 0;
-
-    // 每周期先清零目标，防止失效时残留上一周期力矩
-    wheelLeg_output.left.tau_phi1_nm = 0.0f;
-    wheelLeg_output.left.tau_phi4_nm = 0.0f;
-    wheelLeg_output.left.back_target_nm = 0.0f;
-    wheelLeg_output.left.front_target_nm = 0.0f;
-
-    wheelLeg_output.right.tau_phi1_nm = 0.0f;
-    wheelLeg_output.right.tau_phi4_nm = 0.0f;
-    wheelLeg_output.right.back_target_nm = 0.0f;
-    wheelLeg_output.right.front_target_nm = 0.0f;
-
-
-    //  左腿 
-
-    if(wheelLeg_vmc.left.valid)
-    {
-        wheelLeg_output.left.tau_phi1_nm =wheelLeg_vmc.left.tau_phi1_nm;
-        wheelLeg_output.left.tau_phi4_nm =wheelLeg_vmc.left.tau_phi4_nm;
-
-        //VMC数学坐标 到 左侧真实电机坐标
-        left_back =LEFT_BACK_TORQUE_DIRECTION *wheelLeg_vmc.left.tau_phi1_nm;
-        left_front = LEFT_FRONT_TORQUE_DIRECTION * wheelLeg_vmc.left.tau_phi4_nm;
-
-        WheelLeg_Output_LimitPair( &left_back, &left_front, wheelLeg_output.torque_limit_nm );
-
-        wheelLeg_output.left.back_target_nm =left_back;
-
-        wheelLeg_output.left.front_target_nm = left_front;
-
-        wheelLeg_output.left.valid = 1;
-    }
-
-        //  右腿 
-
-    if(wheelLeg_vmc.right.valid)
-    {
-        wheelLeg_output.right.tau_phi1_nm = wheelLeg_vmc.right.tau_phi1_nm;
-        wheelLeg_output.right.tau_phi4_nm =wheelLeg_vmc.right.tau_phi4_nm;
-
-        ////VMC数学坐标 到 右侧真实电机坐标
-        right_back =RIGHT_BACK_TORQUE_DIRECTION *wheelLeg_vmc.right.tau_phi1_nm;
-        right_front = RIGHT_FRONT_TORQUE_DIRECTION * wheelLeg_vmc.right.tau_phi4_nm;
-
-        WheelLeg_Output_LimitPair( &right_back, &right_front, wheelLeg_output.torque_limit_nm);
-
-        wheelLeg_output.right.back_target_nm =right_back;
-
-        wheelLeg_output.right.front_target_nm = right_front;
-
-        wheelLeg_output.right.valid = 1;
-    }
-}
-
-void WheelLeg_Output_SetLegEnable(uint8_t left_enable,uint8_t right_enable)
-{
-    wheelLeg_output.left.enable_request =left_enable ? 1U : 0U;
-
-    wheelLeg_output.right.enable_request = right_enable ? 1U : 0U;
-}
-
-void WheelLeg_Output_UpdateEnable(void)
-{
-
-// 没有使能请求
-if(wheelLeg_output.left.enable_request == 0)
-{
-    // 如果之前已经使能，则主动退出
-    if(wheelLeg_output.left.enable_sent)
-    {
-        Motor_DM_CMD_Disable(&Chassis_JointMotor_CAN,Chassis_JointMotor1_Send_CAN_ID);
-
-        osDelay(1);
-
-        Motor_DM_CMD_Disable(&Chassis_JointMotor_CAN,Chassis_JointMotor2_Send_CAN_ID );
-
-        osDelay(1);
-    }
-
-    wheelLeg_output.left.enable_sent = 0;
-    wheelLeg_output.left.ready = 0;
-    wheelLeg_output.left.fault = 0;
-
-    wheelLeg_output.left.back_command_nm = 0.0f;
-    wheelLeg_output.left.front_command_nm = 0.0f;
-}
-else
-{
-    // fault出现以后，不自动重新使能
-    if(wheelLeg_output.left.fault)
-    {
-        wheelLeg_output.left.ready = 0;
-
-        wheelLeg_output.left.back_command_nm = 0.0f;
-        wheelLeg_output.left.front_command_nm = 0.0f;
-    }
-
-    // 第一次收到Enable请求
-    else if(wheelLeg_output.left.enable_sent == 0)
-    {
-    
-        // 左后 LB = JointMotor2
-      
-        Motor_DM_CMD_ClearErr( &Chassis_JointMotor_CAN,Chassis_JointMotor2_Send_CAN_ID);
-        osDelay(1);
-        Motor_DM_CMD_Enable(&Chassis_JointMotor_CAN, Chassis_JointMotor2_Send_CAN_ID );
-        osDelay(1);
-
-        //左前 LF = JointMotor1
-        
-        Motor_DM_CMD_ClearErr(&Chassis_JointMotor_CAN,Chassis_JointMotor1_Send_CAN_ID);
-        osDelay(1);
-        Motor_DM_CMD_Enable(&Chassis_JointMotor_CAN,Chassis_JointMotor1_Send_CAN_ID );
-        osDelay(1);
-
-        wheelLeg_output.left.enable_sent = 1;
-        wheelLeg_output.left.ready = 0;
-    }
-
-    else
-    {
-        // 检查是否出现异常状态
-        if(
-            ((wheelLeg_motor.left_front.error_id != 0) &&
-             (wheelLeg_motor.left_front.error_id != 1))
-            ||
-            ((wheelLeg_motor.left_back.error_id != 0) &&
-             (wheelLeg_motor.left_back.error_id != 1))
-          )
-        {
-            wheelLeg_output.left.fault = 1;
-            wheelLeg_output.left.ready = 0;
-
-            wheelLeg_output.left.back_command_nm = 0.0f;
-            wheelLeg_output.left.front_command_nm = 0.0f;
-
-            Motor_DM_CMD_Disable(&Chassis_JointMotor_CAN, Chassis_JointMotor1_Send_CAN_ID );
-
-            osDelay(1);
-
-            Motor_DM_CMD_Disable(&Chassis_JointMotor_CAN,Chassis_JointMotor2_Send_CAN_ID);
-
-            wheelLeg_output.left.enable_sent = 0;
-        }
-
-        // 两个左腿电机都在线且进入正常Enable状态
-        else if(
-            (wheelLeg_motor.left_front.online == 1) &&
-            (wheelLeg_motor.left_back.online == 1) &&
-            (wheelLeg_motor.left_front.error_id == 1) &&
-            (wheelLeg_motor.left_back.error_id == 1)
-          )
-        {
-            wheelLeg_output.left.ready = 1;
-        }
-        else
-        {
-            wheelLeg_output.left.ready = 0;
-        }
-    }
-}
-
-    /*
-     * ========== 右腿 ==========
-     */
-
-    // 没有使能请求
-    if(wheelLeg_output.right.enable_request == 0)
-    {
-        // 如果此前确实使能过，则退出时主动Disable
-        if(wheelLeg_output.right.enable_sent)
-        {
-            Motor_DM_CMD_Disable(&Chassis_JointMotor_CAN, Chassis_JointMotor3_Send_CAN_ID );
-            osDelay(1);
-            Motor_DM_CMD_Disable(&Chassis_JointMotor_CAN,Chassis_JointMotor4_Send_CAN_ID );
-            osDelay(1);
-        }
-
-        wheelLeg_output.right.enable_sent = 0;
-        wheelLeg_output.right.ready = 0;
-        wheelLeg_output.right.fault = 0;
-
-        wheelLeg_output.right.back_command_nm = 0.0f;
-        wheelLeg_output.right.front_command_nm = 0.0f;
-
-        return;
-    }
-
-        // fault一旦出现，不允许自动重新使能
-    // 必须先把enable_request撤掉，再重新启动
-    if(wheelLeg_output.right.fault)
-    {
-        wheelLeg_output.right.ready = 0;
-
-        wheelLeg_output.right.back_command_nm = 0.0f;
-        wheelLeg_output.right.front_command_nm = 0.0f;
-
-        return;
-    }
-
-        if(wheelLeg_output.right.enable_sent == 0)
-    {
-        
-        //右后 RB = JointMotor4
-        
-        Motor_DM_CMD_ClearErr( &Chassis_JointMotor_CAN,Chassis_JointMotor4_Send_CAN_ID);
-        osDelay(1);
-        Motor_DM_CMD_Enable(&Chassis_JointMotor_CAN,Chassis_JointMotor4_Send_CAN_ID);
-        osDelay(1);
-
-
-        
-        //右前 RF = JointMotor3
-         
-        Motor_DM_CMD_ClearErr(&Chassis_JointMotor_CAN,Chassis_JointMotor3_Send_CAN_ID);
-        osDelay(1);
-        Motor_DM_CMD_Enable( &Chassis_JointMotor_CAN, Chassis_JointMotor3_Send_CAN_ID );
-        osDelay(1);
-
-        wheelLeg_output.right.enable_sent = 1;
-        wheelLeg_output.right.ready = 0;
-
-        return;
-    }
-
-        /*
-     * 达妙正常Enable状态为 error_id == 1。
-     * 0表示尚未进入正常工作状态；
-     * 其他状态当前按异常处理。
-     */
-    if(
-        ((wheelLeg_motor.right_front.error_id != 0) &&
-         (wheelLeg_motor.right_front.error_id != 1))
-        ||
-        ((wheelLeg_motor.right_back.error_id != 0) &&
-         (wheelLeg_motor.right_back.error_id != 1))
-      )
-    {
-        wheelLeg_output.right.fault = 1;
-        wheelLeg_output.right.ready = 0;
-
-        wheelLeg_output.right.back_command_nm = 0.0f;
-        wheelLeg_output.right.front_command_nm = 0.0f;
-
-        // 异常立即失能
-        Motor_DM_CMD_Disable( &Chassis_JointMotor_CAN, Chassis_JointMotor3_Send_CAN_ID);
-        osDelay(1);
-        Motor_DM_CMD_Disable(&Chassis_JointMotor_CAN, Chassis_JointMotor4_Send_CAN_ID);
-        wheelLeg_output.right.enable_sent = 0;
-
-        return;
-    }
-
-        if(
-        (wheelLeg_motor.right_front.online == 1) &&
-        (wheelLeg_motor.right_back.online == 1) &&
-        (wheelLeg_motor.right_front.error_id == 1) &&
-        (wheelLeg_motor.right_back.error_id == 1)
-      )
-    {
-        wheelLeg_output.right.ready = 1;
-    }
-    else
-    {
-        wheelLeg_output.right.ready = 0;
-    }
-}
-
-void WheelLeg_Output_UpdateCommand(float dt)
-{
-    /*
-     * dt异常时，两条腿都立即清零。
-     * 不允许继续保留上一周期力矩。
-     */
-    if((dt <= 0.0f) || (!isfinite(dt)))
-    {
-        wheelLeg_output.left.back_command_nm = 0.0f;
-        wheelLeg_output.left.front_command_nm = 0.0f;
-
-        wheelLeg_output.right.back_command_nm = 0.0f;
-        wheelLeg_output.right.front_command_nm = 0.0f;
-
-        return;
-    }
-
-
-    /* =========================================================
-     * 左腿
-     * ========================================================= */
-
-    if(
-        (wheelLeg_output.left.enable_request == 0) ||
-        (wheelLeg_output.left.enable_sent == 0) ||
-        (wheelLeg_output.left.ready == 0) ||
-        (wheelLeg_output.left.fault != 0) ||
-        (wheelLeg_output.left.valid == 0)
-      )
-    {
-        wheelLeg_output.left.back_command_nm = 0.0f;
-        wheelLeg_output.left.front_command_nm = 0.0f;
-    }
-    else if(
-        (!isfinite(wheelLeg_output.left.back_target_nm)) ||
-        (!isfinite(wheelLeg_output.left.front_target_nm))
-      )
-    {
-        wheelLeg_output.left.back_command_nm = 0.0f;
-        wheelLeg_output.left.front_command_nm = 0.0f;
-    }
-    else
-    {
-        WheelLeg_Output_SlewPair(
-            wheelLeg_output.left.back_target_nm,
-            wheelLeg_output.left.front_target_nm,
-
-            &wheelLeg_output.left.back_command_nm,
-            &wheelLeg_output.left.front_command_nm,
-
-            WHEELLEG_OUTPUT_TORQUE_SLEW_NM_S,
-            dt
-        );
-    }
-
-
-    /* =========================================================
-     * 右腿
-     * ========================================================= */
-
-    if(
-        (wheelLeg_output.right.enable_request == 0) ||
-        (wheelLeg_output.right.enable_sent == 0) ||
-        (wheelLeg_output.right.ready == 0) ||
-        (wheelLeg_output.right.fault != 0) ||
-        (wheelLeg_output.right.valid == 0)
-      )
-    {
-        wheelLeg_output.right.back_command_nm = 0.0f;
-        wheelLeg_output.right.front_command_nm = 0.0f;
-    }
-    else if(
-        (!isfinite(wheelLeg_output.right.back_target_nm)) ||
-        (!isfinite(wheelLeg_output.right.front_target_nm))
-      )
-    {
-        wheelLeg_output.right.back_command_nm = 0.0f;
-        wheelLeg_output.right.front_command_nm = 0.0f;
-    }
-    else
-    {
-        WheelLeg_Output_SlewPair(
-            wheelLeg_output.right.back_target_nm,
-            wheelLeg_output.right.front_target_nm,
-
-            &wheelLeg_output.right.back_command_nm,
-            &wheelLeg_output.right.front_command_nm,
-
-            WHEELLEG_OUTPUT_TORQUE_SLEW_NM_S,
-            dt
-        );
-    }
-}
-
-void WheelLeg_Output_Send(void)
-{
-
-    /*
-     * 左前 LF = JointMotor1
-     * Front command
-     */
-    Motor_DM_CMD_MIT(
-        &Chassis_JointMotor_CAN,
-        Chassis_JointMotor1_Send_CAN_ID,
-
-        0.0f,
-        0.0f,
-        0.0f,
-        0.0f,
-
-        wheelLeg_output.left.front_command_nm
-    );
-
-
-    /*
-     * 左后 LB = JointMotor2
-     * Back command
-     */
-    Motor_DM_CMD_MIT(
-        &Chassis_JointMotor_CAN,
-        Chassis_JointMotor2_Send_CAN_ID,
-
-        0.0f,
-        0.0f,
-        0.0f,
-        0.0f,
-
-        wheelLeg_output.left.back_command_nm
-    );
-
-    /*
-     * 右前 RF = JointMotor3
-     * Front command
-     */
-    Motor_DM_CMD_MIT(
-        &Chassis_JointMotor_CAN,
-        Chassis_JointMotor3_Send_CAN_ID,
-
-        0.0f,
-        0.0f,
-        0.0f,
-        0.0f,
-
-        wheelLeg_output.right.front_command_nm
-    );
-
-    /*
-     * 右后 RB = JointMotor4
-     * Back command
-     */
-    Motor_DM_CMD_MIT(
-        &Chassis_JointMotor_CAN,
-        Chassis_JointMotor4_Send_CAN_ID,
-
-        0.0f,
-        0.0f,
-        0.0f,
-        0.0f,
-
-        wheelLeg_output.right.back_command_nm
-    );
-}

@@ -1,3 +1,8 @@
+/**
+ * @file    WheelLeg_Kinematics.c[底盘运动学解算]
+ * @brief   轮腿底盘五连杆运动学解算和卡尔曼滤波后腿参数
+ * @details 通过电机角度解算得到观察腿摆角和腿长，然后通过卡尔曼滤波得到滤波数据
+ */
 #include "WheelLeg_Kinematics.h"
 #include "WheelLeg_Motor.h"
 #include <math.h>
@@ -7,11 +12,11 @@
 #define WHEELLEG_PI                     3.14159265358979323846f
 
 //上下连杆的长度
-#define WHEELLEG_UPPER_LINK_LENGTH      0.21f
-#define WHEELLEG_LOWER_LINK_LENGTH      0.25f
+#define WheelLeg_Up_Lengh      0.21f
+#define WheelLeg_Down_Lengh      0.25f
 
 //中间连杆的长度 等于0 约等于4连杆
-#define WHEELLEG_HIP_DISTANCE           0.0f
+#define WheelLeg_hip_Distance           0.0f
 
 WheelLeg_Kinematics wheelLeg_kinematics={0};
 
