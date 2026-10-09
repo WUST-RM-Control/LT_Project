@@ -984,24 +984,9 @@
               <FilePath>..\Project\WheelLeg\WheelLeg_Chassis.c</FilePath>
             </File>
             <File>
-              <FileName>WheelLeg_Motor.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Project\WheelLeg\WheelLeg_Motor.c</FilePath>
-            </File>
-            <File>
               <FileName>WheelLeg_Kinematics.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Project\WheelLeg\WheelLeg_Kinematics.c</FilePath>
-            </File>
-            <File>
-              <FileName>WheelLeg_VMC.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Project\WheelLeg\WheelLeg_VMC.c</FilePath>
-            </File>
-            <File>
-              <FileName>WheelLeg_LegController.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Project\WheelLeg\WheelLeg_LegController.c</FilePath>
             </File>
             <File>
               <FileName>WheelLeg_SpringComp.c</FileName>

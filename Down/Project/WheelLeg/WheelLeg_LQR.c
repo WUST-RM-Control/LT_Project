@@ -1,356 +1,284 @@
+/**
+ * @file    WheelLeg_LQR.c[LQR运控]
+ * @brief   轮腿底盘的LQR运控
+ */
 #include "WheelLeg_LQR.h"
-
-#include "WheelLeg_Kinematics.h"
-#include "WheelLeg_Motor.h"
-#include "INS.h"
-
+#include "Chassis.h"
+#include "kalman_filter.h"
 #include <math.h>
 
-WheelLeg_LQR wheelLeg_lqr = {0};
+WheelLeg_LQR_Displacement_Date Wheel_Left;
+WheelLeg_LQR_Displacement_Date Wheel_Right;
 
-#define WHEELLEG_DEG_TO_RAD    0.017453292519943295f
-#define WHEELLEG_PITCH_BALANCE_DEG    2.5f
-#define WHEELLEG_PITCH_BALANCE_RAD (WHEELLEG_PITCH_BALANCE_DEG * WHEELLEG_DEG_TO_RAD)
+WheelLeg_LQR_StructTypeDef WheelLeg_LQR_Struct;
 
-// K(ll, lr)的6组拟合系数
-// coefficient[k][u][x]
-
-// 与 MATLAB poly_coeffs 的系数顺序完全一致：
-//
-// k = 0：Ll^2
-// k = 1：Ll*Lr
-// k = 2：Lr^2
-// k = 3：Ll
-// k = 4：Lr
-// k = 5：常数项
-
-
-//matlab仿真数据
-static const float WheelLeg_LQR_GainCoefficient[WHEELLEG_LQR_GAIN_BASIS_NUM][WHEELLEG_LQR_CONTROL_NUM][WHEELLEG_LQR_STATE_NUM] = {
-    {
-        {1.122448988e+00f, 3.222140500e+01f, 1.892555802e-02f, 7.195614614e-02f, 3.564723301e+01f, 8.099866086e-01f, 4.435905965e+01f, 6.833450749e+00f, 2.143847117e+01f, 2.753323293e+00f},
-        {9.621362296e-01f, 2.764610343e+01f, -6.486189784e-02f, -1.822068372e-01f, 5.529405817e+01f, 5.211933753e+00f, 3.144549961e+01f, 5.498095997e+00f, 1.297381042e+01f, 1.693516730e+00f},
-        {6.115009666e+00f, 1.751585449e+02f, 3.237594460e+00f, 9.694133083e+00f, -5.658698114e+02f, -1.070806843e+02f, 5.615808199e+02f, 6.230040716e+01f, 6.252244138e+02f, 5.597242022e+01f},
-        {-6.925129284e+00f, -1.985381691e+02f, -1.522276352e+00f, -4.620774102e+00f, 1.084286312e+02f, 4.880102285e+01f, -4.084992009e+02f, -5.024964223e+01f, -4.024643342e+02f, -3.840935293e+01f}
-    },
-    {
-        {-1.494219366e+00f, -4.290862323e+01f, -7.786609268e-02f, -2.347601987e-01f, -3.871417016e+01f, -5.845511614e+00f, -6.835278219e+01f, -1.100551027e+01f, -5.084944819e+01f, -5.512875491e+00f},
-        {-1.494219366e+00f, -4.290862323e+01f, 7.786609268e-02f, 2.347601987e-01f, -6.835278219e+01f, -1.100551027e+01f, -3.871417016e+01f, -5.845511614e+00f, -5.084944819e+01f, -5.512875491e+00f},
-        {5.400763000e+00f, 1.545705782e+02f, -4.690620851e+00f, -1.418485309e+01f, 9.019958484e+02f, 1.398009004e+02f, -8.035588455e+02f, -1.534452129e+02f, 3.200570966e+02f, 3.300245158e+01f},
-        {5.400763000e+00f, 1.545705782e+02f, 4.690620851e+00f, 1.418485309e+01f, -8.035588455e+02f, -1.534452129e+02f, 9.019958484e+02f, 1.398009004e+02f, 3.200570966e+02f, 3.300245158e+01f}
-    },
-    {
-        {9.621362296e-01f, 2.764610343e+01f, 6.486189784e-02f, 1.822068372e-01f, 3.144549961e+01f, 5.498095997e+00f, 5.529405817e+01f, 5.211933753e+00f, 1.297381042e+01f, 1.693516730e+00f},
-        {1.122448988e+00f, 3.222140500e+01f, -1.892555802e-02f, -7.195614614e-02f, 4.435905965e+01f, 6.833450749e+00f, 3.564723301e+01f, 8.099866086e-01f, 2.143847117e+01f, 2.753323293e+00f},
-        {-6.925129284e+00f, -1.985381691e+02f, 1.522276352e+00f, 4.620774102e+00f, -4.084992009e+02f, -5.024964223e+01f, 1.084286312e+02f, 4.880102285e+01f, -4.024643342e+02f, -3.840935293e+01f},
-        {6.115009666e+00f, 1.751585449e+02f, -3.237594460e+00f, -9.694133083e+00f, 5.615808199e+02f, 6.230040716e+01f, -5.658698114e+02f, -1.070806843e+02f, 6.252244138e+02f, 5.597242022e+01f}
-    },
-    {
-        {-3.667258223e-01f, -1.054291766e+01f, 7.999549389e-02f, 2.323897311e-01f, -3.265858384e+01f, -3.009815536e+00f, -5.025626385e+00f, -1.144105498e+00f, 5.409563650e+00f, 2.475451672e-01f},
-        {-7.907533272e-02f, -2.299510108e+00f, 7.409950207e-02f, 2.156982095e-01f, -2.633873360e+01f, -2.594856779e+00f, 3.630587946e-01f, -7.822632208e-01f, 1.253811346e+01f, 1.170723303e+00f},
-        {-9.723392555e+00f, -2.789749103e+02f, -9.189887176e-01f, -2.730059952e+00f, -4.588501710e+01f, 7.202915800e+00f, -3.462404072e+02f, -3.129444558e+01f, -5.869031314e+02f, -5.600839573e+01f},
-        {5.291023273e+00f, 1.520965728e+02f, -5.251760876e-01f, -1.584835253e+00f, 3.247538669e+02f, 4.614924553e+01f, 1.040828113e+02f, 1.062224446e+01f, 2.006504536e+02f, 1.935950720e+01f}
-    },
-    {
-        {-7.907533272e-02f, -2.299510108e+00f, -7.409950207e-02f, -2.156982095e-01f, 3.630587946e-01f, -7.822632208e-01f, -2.633873360e+01f, -2.594856779e+00f, 1.253811346e+01f, 1.170723303e+00f},
-        {-3.667258223e-01f, -1.054291766e+01f, -7.999549389e-02f, -2.323897311e-01f, -5.025626385e+00f, -1.144105498e+00f, -3.265858384e+01f, -3.009815536e+00f, 5.409563650e+00f, 2.475451672e-01f},
-        {5.291023273e+00f, 1.520965728e+02f, 5.251760876e-01f, 1.584835253e+00f, 1.040828113e+02f, 1.062224446e+01f, 3.247538669e+02f, 4.614924553e+01f, 2.006504536e+02f, 1.935950720e+01f},
-        {-9.723392555e+00f, -2.789749103e+02f, 9.189887176e-01f, 2.730059952e+00f, -3.462404072e+02f, -3.129444558e+01f, -4.588501710e+01f, 7.202915800e+00f, -5.869031314e+02f, -5.600839573e+01f}
-    },
-    {
-        {8.980121616e-03f, 2.586699060e-01f, -2.509502442e-02f, -7.183459859e-02f, 6.523055019e-01f, 2.326616653e-01f, 7.250470008e-01f, 2.365430935e-01f, -6.945132876e+00f, -6.785661009e-01f},
-        {8.980121616e-03f, 2.586699060e-01f, 2.509502442e-02f, 7.183459859e-02f, 7.250470008e-01f, 2.365430935e-01f, 6.523055019e-01f, 2.326616653e-01f, -6.945132876e+00f, -6.785661009e-01f},
-        {1.356658394e+00f, 3.894164440e+01f, -1.840184262e-02f, -4.981860250e-02f, 2.899384190e+01f, 1.699894418e+00f, 2.427620878e+01f, 1.570484581e+00f, 2.019408982e+01f, 4.318711116e+00f},
-        {1.356658394e+00f, 3.894164440e+01f, 1.840184262e-02f, 4.981860250e-02f, 2.427620878e+01f, 1.570484581e+00f, 2.899384190e+01f, 1.699894418e+00f, 2.019408982e+01f, 4.318711116e+00f}
-    }
+//三次多项式拟合系数
+static const float Poly_Coefficient[12][4]={
+    {-204.71377921f,	289.63818168f,  -157.59015500f, -4.96782823f},
+	{-7.82854075f,	    19.15680744f,	-17.41989049f,	-0.23003324f},
+	{-7.53928256f,	    12.07032519f,	-6.74694158f,	-0.05542880f},
+	{-13.69695924f,     22.38839045f,	-12.69903703f,	-0.34124181f},
+	{202.15935394f,	    -119.52253547f,	-28.73024512f,	30.05658725f},
+	{8.53035961f,	    0.97505447f,	-8.73026755f,	4.45533442f},
+	{1451.56173722f,	-1146.30857312f,122.25511452f,	96.79758089f},
+	{170.43065142f,	    -127.63122938f,	1.84610137f,	19.79612454f},
+	{55.36361918f,	    -32.73259440f,	-7.86810167f,	8.23133542f},
+	{36.92907744f,	    7.73400354f,	-41.51630122f,	19.92978630f},
+	{825.88702496f,	    -1322.23787701f,739.09041989f,	6.07192070f},
+	{120.04567253f,	    -175.60627295f,	92.90386168f,	-0.44963915f}
 };
 
-static uint8_t WheelLeg_LQR_UpdateState(void)
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KalmanFilter_t L_vaEstimateKF;	   // 卡尔曼滤波器结构体-左腿 
+KalmanFilter_t R_vaEstimateKF;	   // 卡尔曼滤波器结构体-右腿
+float L_vaEstimateKF_F[4] = {1.0f, 0.002f, 0.0f, 1.0f};	   // 状态转移矩阵，控制周期为0.002s
+float L_vaEstimateKF_P[4] = {1.0f, 0.0f, 0.0f, 1.0f};      // 后验估计协方差初始值
+const float L_vaEstimateKF_H[4] = {1.0f, 0.0f, 0.0f, 1.0f};// 设置矩阵H为常量
+
+float R_vaEstimateKF_F[4] = {1.0f, 0.002f, 0.0f, 1.0f};	   // 状态转移矩阵，控制周期为0.002s
+float R_vaEstimateKF_P[4] = {1.0f, 0.0f, 0.0f, 1.0f};      // 后验估计协方差初始值
+const float R_vaEstimateKF_H[4] = {1.0f, 0.0f, 0.0f, 1.0f};// 设置矩阵H为常量
+float L_vaEstimateKF_K[4];
+float R_vaEstimateKF_K[4];
+
+float L_vaEstimateKF_Q[4] = {0.05f, 0.0f, 0.0f, 0.01f};     // Q矩阵初始值
+float L_vaEstimateKF_R[4] = {1000.0f,  0.0f,   0.0f, 500000.0f}; 	  
+								 
+float R_vaEstimateKF_Q[4] = {0.05f, 0.0f, 0.0f, 0.01f};     // Q矩阵初始值
+float R_vaEstimateKF_R[4] = {1000.0f,  0.0f, 0.0f, 500000.0f};  	
+						 
+float vel_acc[2]; 
+	
+float V_L;							 
+float V_R;	
+float V_ave;
+
+static void xvEstimateKF_Init(KalmanFilter_t *L_EstimateKF,KalmanFilter_t *R_EstimateKF)//卡尔曼滤波速度观测器初始化
 {
-    float pitch_error_rad;
-    float body_pitch_rad;
-    float body_pitch_rate_rad_s;
+    Kalman_Filter_Init(L_EstimateKF, 2, 0, 2);	// 状态向量2维 没有控制量 测量向量2维
+	Kalman_Filter_Init(R_EstimateKF, 2, 0, 2);	// 状态向量2维 没有控制量 测量向量2维
+	
+	memcpy(L_EstimateKF->F_data, L_vaEstimateKF_F, sizeof(L_vaEstimateKF_F));
+    memcpy(L_EstimateKF->P_data, L_vaEstimateKF_P, sizeof(L_vaEstimateKF_P));
+    memcpy(L_EstimateKF->Q_data, L_vaEstimateKF_Q, sizeof(L_vaEstimateKF_Q));
+    memcpy(L_EstimateKF->R_data, L_vaEstimateKF_R, sizeof(L_vaEstimateKF_R));
+    memcpy(L_EstimateKF->H_data, L_vaEstimateKF_H, sizeof(L_vaEstimateKF_H));
+	
+	memcpy(R_EstimateKF->F_data, R_vaEstimateKF_F, sizeof(R_vaEstimateKF_F));
+    memcpy(R_EstimateKF->P_data, R_vaEstimateKF_P, sizeof(R_vaEstimateKF_P));
+    memcpy(R_EstimateKF->Q_data, R_vaEstimateKF_Q, sizeof(R_vaEstimateKF_Q));
+    memcpy(R_EstimateKF->R_data, R_vaEstimateKF_R, sizeof(R_vaEstimateKF_R));
+    memcpy(R_EstimateKF->H_data, R_vaEstimateKF_H, sizeof(R_vaEstimateKF_H));
 
-    uint8_t i;
+}
 
-    // 左右腿运动学必须有效
-    if((wheelLeg_kinematics.left.valid == 0) ||(wheelLeg_kinematics.right.valid == 0))
+static void xvEstimateKF_Update(KalmanFilter_t *EstimateKF ,float acc,float vel)//卡尔曼滤波速度观测器数据更新
+{   	
+    //卡尔曼滤波器测量值更新
+    EstimateKF->MeasuredVector[0] =	vel;//测量速度
+    EstimateKF->MeasuredVector[1] = acc;//测量加速度
+    		
+    //卡尔曼滤波器更新函数
+    Kalman_Filter_Update(EstimateKF);
+
+    // 提取估计值
+    for (uint8_t i = 0; i < 2; i++)
     {
-        return 0;
+      vel_acc[i] = EstimateKF->FilteredValue[i];
+    }
+}
+
+/**
+ * @brief 计算位移和速度
+ * 
+ */
+static void WheelLeg_LQR_Calculated_Displacement(Chassis_Control_StructTypedef *Chassis_Control_Struct)
+{
+
+/*===| 得到底盘目标位移和速度 |===*/
+    static float is_moving;
+    static float was_moving;
+	//位移
+	// 判断当前和上一次的速度是否“有效”（非零）
+	// 判断当前和上一次的速度是否“有效”（非零）
+	is_moving  = fabsf(Chassis_Control_Struct->Chassis_Control.Vy_Target)      > 0.05f;
+	was_moving = fabsf(Chassis_Control_Struct->Chassis_Control.Vy_Target_Last) > 0.05f;
+
+	// 状态一：刹车瞬间 (从运动变为静止)
+	if (was_moving && !is_moving) 
+	{
+		// 【关键修复】清零积分器，为下次起步做准备
+		WheelLeg_LQR_Struct.Wheel_displacement_add = 0.0f; 
+	}
+	// 状态二：起步瞬间 (从静止变为运动)
+	else if (!was_moving && is_moving) 
+	{
+		// 记录起点的实际位移
+		WheelLeg_LQR_Struct.Wheel_displacement_init = WheelLeg_LQR_Struct.Target_displacement;
+		// 【关键修复】清零积分器，防止历史脏数据导致瞬间跳跃
+		WheelLeg_LQR_Struct.Wheel_displacement_add = 0.0f;
+	}
+	// 状态三：持续运动中 (不管之前是什么状态，只要现在有速度就执行积分)
+	if (is_moving) 
+	{
+		// 正常积分
+		WheelLeg_LQR_Struct.Wheel_displacement_add += Chassis_Control_Struct->Chassis_Control.Vy_Target * Chassis_Control_Struct->Chassis_Dt;
+		// 计算目标位移 = 起点位移 + 积分出来的位移增量
+		WheelLeg_LQR_Struct.Target_displacement = WheelLeg_LQR_Struct.Wheel_displacement_init + WheelLeg_LQR_Struct.Wheel_displacement_add;
+	}
+
+    WheelLeg_LQR_Struct.Wheel_Speed_Target = Chassis_Control_Struct->Chassis_Control.Vy_Target;
+
+//得到轮子的实际位移 Wheel_Displacement_Feedback
+    Wheel_Left.Displacement_Now  = Motor.Wheel_Motor1.Total_Angle / Motor_3508_Reduction * Chassis_Wheel_Radius * Angle_to_Radain;
+    Wheel_Right.Displacement_Now = Motor.Wheel_Motor1.Total_Angle / Motor_3508_Reduction * Chassis_Wheel_Radius * Angle_to_Radain;
+    Wheel_Left.Displacement  = -(Wheel_Left.Displacement_Now  - Wheel_Left.Displacement_Init);
+    Wheel_Right.Displacement =   Wheel_Right.Displacement_Now - Wheel_Right.Displacement_Init;
+
+	Wheel_Left.Wheel_Speed_Feedback  = -Motor.Chassis_DriverMotor1.Speed_RPM * Chassis_RPM_to_m_s;
+	Wheel_Right.Wheel_Speed_Feedback =  Motor.Chassis_DriverMotor2.Speed_RPM * Chassis_RPM_to_m_s;
+
+/*===| 卡尔曼滤波得到底盘实际位移和速度 |===*/
+		xvEstimateKF_Update(&L_vaEstimateKF,-Chassis_Control_Struct.Acceleration_Y,Wheel_Left.Wheel_Speed_Feedback);//得到卡尔曼滤波后左轮的速度
+		xvEstimateKF_Update(&R_vaEstimateKF,-Chassis_Control_Struct.Acceleration_Y,Wheel_Right.Wheel_Speed_Feedback);//得到卡尔曼滤波后右轮的速度
+		WheelLeg_LQR_Struct.Wheel_Speed_Feedback = (L_vaEstimateKF.FilteredValue[0]+R_vaEstimateKF.FilteredValue[0])*0.5;
+
+/*===|根据底盘状态更新底盘Init位移|===*/
+    //非使能状态下更新
+    if(Chassis_Control_Struct->Chassis_Control.Chassis_State != Chassis_FOLLOW
+    && Chassis_Control_Struct->Chassis_Control.Chassis_State != Chassis_SPIN
+    && Chassis_Control_Struct->Chassis_Control.Chassis_State != Chassis_Jump
+    && Chassis_Control_Struct->Chassis_Control.Chassis_State != Chassis_UpStep)
+    {
+        //轮位移
+        Wheel_Left.Displacement_Init  = Wheel_Left.Displacement_Now;
+        Wheel_Right.Displacement_Init = Wheel_Right.Displacement_Now;
+        //底盘位移
+        WheelLeg_LQR_Struct.Wheel_Displacement_Target = WheelLeg_LQR_Struct.Wheel_Displacement_Feedback;
+        WheelLeg_LQR_Struct.Wheel_displacement_init   = WheelLeg_LQR_Struct.Wheel_Displacement_Feedback;
     }
 
-    // 检查IMU数据
-    if(!isfinite(INS_Data_Self.Pitch) ||!isfinite(INS_Data_Self.YawTotalAngle) ||!isfinite(INS_Data_Self.Yaw_Speed) ||!isfinite(INS_Data_Self.Gyro[0]))
+}
+/**
+ * @brief 添加六个状态量
+ */
+static void WheelLeg_LQR_add_six_state(Chassis_Control_StructTypedef *Chassis_Control)
+{
+	WheelLeg_LQR_Struct.State[1] =  (Chassis_Control->Leg_Left.Angle_Feedback)*Angle2Radain    - (Chassis_Control->Chassis_Control.Pitch-2.5*Angle2Radain);//θ  左腿后摆 θ  为正 增大
+	WheelLeg_LQR_Struct.State[2] =  (Chassis_Control->Leg_Left.Total_Angle_Speed)*Angle2Radain - Chassis_Control->Chassis_Control.Pitch_dot;               //θ’ 左腿后摆 θ’ 为正 增大
+	
+	WheelLeg_LQR_Struct.State[7] = -(Chassis_Control->Leg_Right.Angle_Feedback)*Angle2Radain    - (Chassis_Control->Chassis_Control.Pitch-2.5*Angle2Radain);//θ  右腿后摆 θ  为正 增大
+    WheelLeg_LQR_Struct.State[8] = -(Chassis_Control->Leg_Right.Total_Angle_Speed)*Angle2Radain - Chassis_Control->Chassis_Control.Pitch_dot;               //θ’ 右腿后摆 θ’ 为正 增大
+
+    WheelLeg_LQR_Struct.State[3] = (WheelLeg_LQR_Struct.Wheel_Displacement_Feedback-WheelLeg_LQR_Struct.Chassis_Control.Wheel_Displacement_Target);		//位移							
+    WheelLeg_LQR_Struct.State[4] = (WheelLeg_LQR_Struct.Wheel_Speed_Feedback-WheelLeg_LQR_Struct.Wheel_Speed_Target);	//位移一阶导	 
+    WheelLeg_LQR_Struct.State[5] = Chassis_Control->Chassis_Control.Pitch-2.5*Angle2Radain;	//机体pitch,翘头pitch增大
+    WheelLeg_LQR_Struct.State[6] = Chassis_Control->Chassis_Control.Pitch_dot;				//机体pitch弧度一阶导
+}
+
+static float LQR_K_calc(float *coe,float len)
+{
+  float K = coe[0]*len*len*len + coe[1]*len*len + coe[2]*len + coe[3];
+	
+  return K;
+}
+
+/**
+ * @brief 计算LQR系数K
+ * 
+ * @param Length_Left_Feedback 
+ * @param Length_Right_Feedback 
+ */
+static void calucateK(const float Length_Left_Feedback, const float Length_Right_Feedback)  
+{
+    for(int i = 0; i < 12; i++)
     {
-        return 0;
+		WheelLeg_LQR_Struct.LQR_K_Left[i]  = LQR_K_calc(Poly_Coefficient[i], Length_Left_Feedback);
+        WheelLeg_LQR_Struct.LQR_K_Right[i] = LQR_K_calc(Poly_Coefficient[i], Length_Right_Feedback);
     }
+}
 
-    // 保存左右腿长
-    wheelLeg_lqr.left_leg_length_m =wheelLeg_kinematics.left.length_m;
-    wheelLeg_lqr.right_leg_length_m =wheelLeg_kinematics.right.length_m;
+/**
+ * @brief LQR运控PID补丁
+ * 
+ */
+static void WheelLeg_LQR_PID_Patch(Chassis_Control_StructTypedef *Chassis_Control)
+{
+	PID_Position_Calculate(&WheelLeg_LQR_Struct.Wheel_Wz_Speed_PID ,Chassis_Control->Chassis_Control.Wz_Speed_Target, Chassis_Control->Chassis_Control.Yaw_Speed);
 
-    // 检查腿长
-    if(!isfinite(wheelLeg_lqr.left_leg_length_m) ||!isfinite(wheelLeg_lqr.right_leg_length_m) || wheelLeg_lqr.left_leg_length_m <= 0.0f || wheelLeg_lqr.right_leg_length_m <= 0.0f)
-    {
-        return 0;
-    }
+	PID_Position_Calculate(&WheelLeg_LQR_Struct.Leg_Splits_PID ,0.0f, Chassis_Control->Leg_Left.Angle_Feedback+Chassis_Control->Leg_Right.Angle_Feedback);
 
-    // IMU的Pitch：抬头为正  平衡姿态约为2.5度
-    pitch_error_rad =(INS_Data_Self.Pitch - WHEELLEG_PITCH_BALANCE_DEG)* WHEELLEG_DEG_TO_RAD;
-
-    // 上交模型theta_b：低头为正 与我们的Pitch方向相反
-    body_pitch_rad = -pitch_error_rad;
-
-    // 已经验证Gyro[0]方向与上交theta_b_dot一致
-    body_pitch_rate_rad_s = INS_Data_Self.Gyro[0];
-
-    // x0：机器人前后位移
-    wheelLeg_lqr.state[WHEELLEG_LQR_STATE_S] = 0.5f *(wheelLeg_motor.left_wheel.displacement_m + wheelLeg_motor.right_wheel.displacement_m);
-
-    // x1：机器人前后速度
-    wheelLeg_lqr.state[WHEELLEG_LQR_STATE_S_DOT] = 0.5f * (wheelLeg_motor.left_wheel.linear_velocity_m_s + wheelLeg_motor.right_wheel.linear_velocity_m_s);
-
-    // x2：Yaw 实车已经验证左转为正，与上交phi方向一致
-    wheelLeg_lqr.state[WHEELLEG_LQR_STATE_YAW] =INS_Data_Self.YawTotalAngle * WHEELLEG_DEG_TO_RAD;
-
-    // x3：Yaw角速度
-    wheelLeg_lqr.state[WHEELLEG_LQR_STATE_YAW_DOT] =INS_Data_Self.Yaw_Speed;
-
-    // x4：左腿相对世界坐标系的绝对倾角
-    // theta_l = theta + theta_b
-    wheelLeg_lqr.state[WHEELLEG_LQR_STATE_LEFT_LEG] = wheelLeg_kinematics.left.angle_total_rad  + body_pitch_rad;
-
-    // x5：左腿绝对角速度
-    wheelLeg_lqr.state[WHEELLEG_LQR_STATE_LEFT_LEG_DOT] = wheelLeg_kinematics.left.angle_velocity_rad_s + body_pitch_rate_rad_s;
-
-    // x6：右腿相对世界坐标系的绝对倾角
-    wheelLeg_lqr.state[WHEELLEG_LQR_STATE_RIGHT_LEG] = wheelLeg_kinematics.right.angle_total_rad  + body_pitch_rad;
-
-    // x7：右腿绝对角速度
-    wheelLeg_lqr.state[WHEELLEG_LQR_STATE_RIGHT_LEG_DOT] = wheelLeg_kinematics.right.angle_velocity_rad_s + body_pitch_rate_rad_s;
-
-    // x8：机体Pitch
-    wheelLeg_lqr.state[WHEELLEG_LQR_STATE_BODY_PITCH] = body_pitch_rad;
-
-    // x9：机体Pitch角速度
-    wheelLeg_lqr.state[WHEELLEG_LQR_STATE_BODY_PITCH_DOT] = body_pitch_rate_rad_s;
-
-    // 最后统一检查10个状态
-    for(i = 0; i < WHEELLEG_LQR_STATE_NUM; i++)
-    {
-        if(!isfinite(wheelLeg_lqr.state[i]))
-        {
-            return 0;
-        }
-    }
-
-    return 1;
 }
 
 void WheelLeg_LQR_Init(void)
 {
-    uint8_t i;
-    uint8_t j;
+    /*===| 卡尔曼滤波初始化  |===*/
+	xvEstimateKF_Init(&L_vaEstimateKF,&R_vaEstimateKF);
+	//转向&小陀螺速度环
+	PID_Init(&WheelLeg_LQR_Struct.Wheel_Wz_Speed_PID, 3.0f,  0.0f, 0.1f, 0.0f,0.0f,3.0f);
+	//防劈叉PID
+	PID_Init(&WheelLeg_LQR_Struct.Leg_Splits_PID, 4.0f, 0.0f, 0.1f, 0.0f,0.0f,10.0f);
 
-    // 清空10维状态
-    for(i = 0; i < WHEELLEG_LQR_STATE_NUM; i++)
-    {
-        wheelLeg_lqr.state[i] = 0.0f;
-        wheelLeg_lqr.target[i] = 0.0f;
-        wheelLeg_lqr.error[i] = 0.0f;
-    }
-
-    // 清空4x10状态反馈矩阵
-    for(i = 0; i < WHEELLEG_LQR_CONTROL_NUM; i++)
-    {
-        for(j = 0; j < WHEELLEG_LQR_STATE_NUM; j++)
-        {
-            wheelLeg_lqr.gain[i][j] = 0.0f;
-        }
-
-        wheelLeg_lqr.output[i] = 0.0f;
-    }
-
-    wheelLeg_lqr.left_leg_length_m = 0.0f;
-    wheelLeg_lqr.right_leg_length_m = 0.0f;
-
-    wheelLeg_lqr.state_valid = 0;
-    wheelLeg_lqr.valid = 0;
-
-    wheelLeg_lqr.target_valid = 0;
-
-    wheelLeg_lqr.gain_valid = 0;
-}
-//将当前加入LQR的变量作为初始值
-void WheelLeg_LQR_CaptureTarget(void)
-{
-    uint8_t i;
-
-    // 当前状态必须有效
-    if(wheelLeg_lqr.state_valid == 0)
-    {
-        wheelLeg_lqr.target_valid = 0;
-        return;
-    }
-
-    // 默认所有目标状态都为0
-    for(i = 0; i < WHEELLEG_LQR_STATE_NUM; i++)
-    {
-        wheelLeg_lqr.target[i] = 0.0f;
-    }
-
-    // 进入平衡时锁定当前位置
-    wheelLeg_lqr.target[WHEELLEG_LQR_STATE_S] =wheelLeg_lqr.state[WHEELLEG_LQR_STATE_S];
-
-    // 进入平衡时锁定当前Yaw
-    wheelLeg_lqr.target[WHEELLEG_LQR_STATE_YAW] =wheelLeg_lqr.state[WHEELLEG_LQR_STATE_YAW];
-
-    wheelLeg_lqr.target_valid = 1;
 }
 
-void WheelLeg_LQR_ClearTarget(void)
-{
-    uint8_t i;
+static void WheelLeg_LQR_calculation(Chassis_Leg_StructTypedef *Leg_Date, const Chassis_State_EnumTypedef Chsssis_State)
+{	
+	float *LQR_K_LR;
+	float theta,theta_d,xb,xb_d,phi,phi_d;
+	if(Leg_Date->Leg_LR == Leg_L)
+	{
+		LQR_K_LR = WheelLeg_LQR_Struct.LQR_K_Left;
+		theta   = -WheelLeg_LQR_Struct.State[1];
+    	theta_d = -WheelLeg_LQR_Struct.State[2];
+		xb    = -WheelLeg_LQR_Struct.State[3];
+		xb_d  = -WheelLeg_LQR_Struct.State[4];
+		phi   = -WheelLeg_LQR_Struct.State[5];
+		phi_d = -WheelLeg_LQR_Struct.State[6];
+	}
+	else if(Leg_Date->Leg_RL_State == Leg_R)
+	{
+		LQR_K_LR = WheelLeg_LQR_Struct.LQR_K_Right;
+		theta   = WheelLeg_LQR_Struct.State[7];
+    	theta_d = WheelLeg_LQR_Struct.State[8];
+		xb    = WheelLeg_LQR_Struct.State[3];
+		xb_d  = WheelLeg_LQR_Struct.State[4];
+		phi   = WheelLeg_LQR_Struct.State[5];
+		phi_d = WheelLeg_LQR_Struct.State[6];
+	}
+    //板凳状态下输出力矩锁定关节摆角 若用LQR控制关节则注释掉此处的Tp的输出
+//	Chassis_Control_Struct.Torque_Joint_left=-Chassis_Control_Struct.Left_leg_Angle_PID.Output;
+	
+    float Torque_wheel_left = -( LQR_K_LR[0] * theta + LQR_K_LR[1] * theta_d + LQR_K_LR[2] * xb + LQR_K_LR[3] * xb_d + LQR_K_LR[4] * phi + LQR_K_LR[5] * phi_d );
+    Leg_Date->LQR_Link_Torque_Target[1] =  ( LQR_K_LR[6] * theta + LQR_K_LR[7] * theta_d + LQR_K_LR[8] * xb + LQR_K_LR[9] * xb_d + LQR_K_LR[10] * phi + LQR_K_LR[11] * phi_d ) + (Chassis_Control_Struct.Chassis_Control.Leg_Splits_PID.Output);
 
-    for(i = 0; i < WHEELLEG_LQR_STATE_NUM; i++)
-    {
-        wheelLeg_lqr.target[i] = 0.0f;
-        wheelLeg_lqr.error[i] = 0.0f;
-    }
+	if(Chsssis_State == Chassis_Jump)
+	{
+		Leg_Date->LQR_Wheel_Torque_Target = Torque_wheel_left;
+	}
+	else if(Chsssis_State == Chassis_Off_ground)
+	{
+		Leg_Date->LQR_Wheel_Torque_Target = 0;//左轮电机输出置0
+		Leg_Date->LQR_Link_Torque_Target[1] =(LQR_K_LR[6]*(theta) + LQR_K_LR[7]*(theta_d)) + (WheelLeg_LQR_Struct.Leg_Splits_PID.Output);//左关节力矩只保留摆角控制量
+	}
+	else
+	{
+		Leg_Date->LQR_Wheel_Torque_Target = Torque_wheel_left + WheelLeg_LQR_Struct.Wheel_Wz_Speed_PID;
+	}
 
-    for(i = 0; i < WHEELLEG_LQR_CONTROL_NUM; i++)
-    {
-        wheelLeg_lqr.output[i] = 0.0f;
-    }
-
-    wheelLeg_lqr.target_valid = 0;
-    wheelLeg_lqr.valid = 0;
+	Limit_float(&Leg_Date->LQR_Link_Torque_Target[1],80.0f,-80.0f);
+	Limit_float(&Leg_Date->LQR_Wheel_Torque_Target,5.0f,-5.0f);
 }
 
-static uint8_t WheelLeg_LQR_UpdateError(void)
+void WheelLeg_LQR_Output(Chassis_Control_StructTypedef *Chassis_Control)
 {
-    uint8_t i;
+	WheelLeg_LQR_Calculated_Displacement(Chassis_Control);
 
-    if((wheelLeg_lqr.state_valid == 0) ||(wheelLeg_lqr.target_valid == 0))
-    {
-        return 0;
-    }
+	WheelLeg_LQR_add_six_state(Chassis_Control);
 
-    for(i = 0; i < WHEELLEG_LQR_STATE_NUM; i++)
-    {
-        // 上交控制律：u = K(xd - x)
-        wheelLeg_lqr.error[i] =wheelLeg_lqr.target[i] -wheelLeg_lqr.state[i];
-    }
+	calucateK(Chassis_Control->Leg_Left.Length_Feedback, Chassis_Control->Leg_Right.Length_Feedback);
 
-    return 1;
-}
+	WheelLeg_LQR_PID_Patch(Chassis_Control);
 
-static uint8_t WheelLeg_LQR_UpdateGain(void)
-{
-    float ll;
-    float lr;
-    float basis[WHEELLEG_LQR_GAIN_BASIS_NUM];
-
-    uint8_t u;
-    uint8_t x;
-    uint8_t k;
-
-    ll = wheelLeg_lqr.left_leg_length_m;
-    lr = wheelLeg_lqr.right_leg_length_m;
-
-    // 检查左右腿长
-    if(!isfinite(ll) ||!isfinite(lr) ||ll <= 0.0f ||lr <= 0.0f)
-    {
-        return 0;
-    }
-
-    // 当前还没有真实K拟合系数 禁止认为gain有效
-    if(WHEELLEG_LQR_GAIN_COEFF_READY == 0U)
-    {
-        return 0;
-    }
-
-    // 与 MATLAB poly_coeffs 的系数顺序保持完全一致
-    // Kij = c0*Ll^2 + c1*Ll*Lr + c2*Lr^2+ c3*Ll   + c4*Lr    + c5
-    basis[0] = ll * ll;
-    basis[1] = ll * lr;
-    basis[2] = lr * lr;
-    basis[3] = ll;
-    basis[4] = lr;
-    basis[5] = 1.0f;
-
-    // 计算4×10状态反馈矩阵K
-    for(u = 0; u < WHEELLEG_LQR_CONTROL_NUM; u++)
-    {
-        for(x = 0; x < WHEELLEG_LQR_STATE_NUM; x++)
-        {
-            wheelLeg_lqr.gain[u][x] = 0.0f;
-
-            for(k = 0; k < WHEELLEG_LQR_GAIN_BASIS_NUM; k++)
-            {
-                wheelLeg_lqr.gain[u][x] +=WheelLeg_LQR_GainCoefficient[k][u][x]* basis[k];
-            }
-        }
-    }
-
-    return 1;
-}
-
-void WheelLeg_LQR_Update(float dt)
-{
-    uint8_t i;
-    uint8_t j;
-
-    // 当前阶段还没有真正输出LQR力矩
-    // 先始终保持4个输出为0
-    for(i = 0; i < WHEELLEG_LQR_CONTROL_NUM; i++)
-    {
-        wheelLeg_lqr.output[i] = 0.0f;
-    }
-
-    // 默认本周期LQR无效
-    // 默认本周期各阶段均无效
-    wheelLeg_lqr.state_valid = 0;
-    wheelLeg_lqr.gain_valid = 0;
-    wheelLeg_lqr.valid = 0;
-
-    (void)dt;
-
-    // 1. 更新10维状态
-    if(WheelLeg_LQR_UpdateState() == 0)
-    {
-        return;
-    }
-    wheelLeg_lqr.state_valid = 1;
-
-    // 2. 根据左右腿长计算当前4×10 K矩阵
-    if(WheelLeg_LQR_UpdateGain() == 0)
-    {
-        return;
-    }
-    wheelLeg_lqr.gain_valid = 1;
-
-    // 3. 目标值还没有建立时，不继续计算
-    if(wheelLeg_lqr.target_valid == 0)
-    {
-        return;
-    }
-
-    // 4. 计算状态误差 xd - x
-    if(WheelLeg_LQR_UpdateError() == 0)
-    {
-        return;
-    }
-
-    // 5. LQR状态反馈  u = K * (xd - x)
-    for(i = 0; i < WHEELLEG_LQR_CONTROL_NUM; i++)
-    {
-        for(j = 0; j < WHEELLEG_LQR_STATE_NUM; j++)
-        {
-            wheelLeg_lqr.output[i] +=wheelLeg_lqr.gain[i][j] *wheelLeg_lqr.error[j];
-        }
-    }
-
-    // 状态、K矩阵、目标值全部有效
-    wheelLeg_lqr.valid = 1;
+	WheelLeg_LQR_calculation(&Chassis_Control->Leg_Left,  Chassis_Control->Chassis_Control.Chassis_State);
+	WheelLeg_LQR_calculation(&Chassis_Control->Leg_Right, Chassis_Control->Chassis_Control.Chassis_State);
 }

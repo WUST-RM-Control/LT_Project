@@ -1,6 +1,6 @@
 ./kawashiro_frame_g474/wheelleg_springcomp.o: \
   ..\Project\WheelLeg\WheelLeg_SpringComp.c \
-  ..\Project\WheelLeg\WheelLeg_SpringComp.h ..\Core\Inc\main.h \
+  ..\Project\Robot_Application\Chassis.h ..\Core\Inc\main.h \
   ..\Drivers\STM32G4xx_HAL_Driver\Inc\stm32g4xx_hal.h \
   ..\Core\Inc\stm32g4xx_hal_conf.h \
   ..\Drivers\STM32G4xx_HAL_Driver\Inc\stm32g4xx_hal_rcc.h \
@@ -91,5 +91,6 @@
   ..\Project\Commnuicate_Drivers\USART_Driver.h \
   ..\Project\Commnuicate_Drivers\USB_Driver.h \
   ..\Project\Algorithm_Drivers\Function.h ..\Project\BSP\DWT.h \
-  ..\Project\Algorithm_Drivers\crc8_crc16.h \
-  ..\Project\Hardware_Drivers\Motor_Driver.h ..\Project\BSP\flash.h
+  ..\Project\BSP\Buzzer.h ..\Project\Algorithm_Drivers\crc8_crc16.h \
+  ..\Project\Hardware_Drivers\Motor_Driver.h ..\Project\BSP\flash.h \
+  ..\Project\WheelLeg\WheelLeg_SpringComp.h

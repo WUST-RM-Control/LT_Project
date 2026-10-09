@@ -5,95 +5,11 @@
  * 
  */
 
+#include "Chassis.h"
 #include "WheelLeg_SpringComp.h"
 #include "Buzzer.h"
 #include <math.h>
 #include <string.h>
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//内部参数定义
-
-typedef enum
-{
-    Down =  1,
-    Up   = -1
-}Start_State_EnumTypedef;
-
-typedef enum 
-{
-	Leg_L = 0,
-	Leg_R = 1
-} Chassis_Leg_RL_State_EnumTypedef;
-
-typedef struct 
-{
-    //0正转(初始值转到末端值)，1反转
-    uint8_t Caled_State;
-    //初始转动的目标值(UP:一开始目标值减小，Down:一开始目标值增大)
-    Start_State_EnumTypedef Start_State;
-
-    float Compensation_Speed;//每秒改变的目标值
-    int8_t Compensation_Round;
-    float Compensation_Distance_UP;
-    float Compensation_Distance_Down;
-    //区间大小：一般360(略大于或等于最大的Compensation_Distance_UP-Compensation_Distance_Down，最大指排除机械限位后可能的角度)
-    float Compensation_Distance_Range;
-    
-    float Distance_Target;
-    float Distance_Feedback; 
-    float SpeedRPM_Feedback; 
-    float Current_Output;
-    
-    PID_Struct_TypeDef Distance_PID;
-    PID_Struct_TypeDef Speed_PID;
-    
-    float* Data;
-    
-    uint32_t DWT_Counter;
-    float Dt;
-
-    float Friction_K;
-    float Friction_Out;
-    float Friction_ACC;
-    float Friction_DEC;
-
-
-    //Leg数据
-        Chassis_Leg_RL_State_EnumTypedef Leg_RL_State;
-		float L0_Target;//一阶倒立摆腿长
-		float L0_Feedback;
-		float L0_Last;
-		float L0_Speed;
-		float L0_Speed_Last;
-		
-		float A0_Target;//一阶倒立摆腿角度
-		float A0_Feedback;
-		float A0_Last;
-		float A0_Round;//圈数
-
-		float Total_A0_Target;//一阶倒立摆腿总角度
-		float Total_A0_Feedback;
-		float Total_A0_Last;
-		float Total_A0_Speed;
-	
-	/*===| 雅可比力矩阵 |===*/
-	float Jt[2][2];
-
-	//关节电机目标力矩
-	float T_Target[2];
-	//关节电机VMC
-	//0L:沿杆方向的，1T关节为绕轴力矩
-	float L_T_Target[2];
-
-
-} Motor_Compensation_Config_StructTypedef;
-
-typedef struct
-{
-    float L0_Leg_L_Cal_Data[2048];
-    float L0_Leg_R_Cal_Data[2048];
-} Config_StructTypedef;
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -213,24 +129,25 @@ void WheelLeg_SpringComp_Init(void)
 
 /**
  * ===| 氮气弹簧补偿 |===
- * @param Leg_Length_Feedback---当前腿长
- * @param Leg_Length_Target-----目标腿长
- * @param GasSpring_Output------[out]输出补偿力矩，沿腿方向，一般为负值(收腿方向为负方向)
- * @param Leg_LR----------------0:左腿(Leg_L)，1:右腿(Leg_R)
+ * @param Leg---------------Chassis_Leg_StructTypedef结构体包含如下内容
+ * @param Length_Feedback---当前腿长
+ * @param Length_Target-----目标腿长
+ * @param GasSpring_Output--[out]输出补偿力矩，沿腿方向，一般为负值(收腿方向为负方向)
+ * @param Leg_LR------------0:左腿(Leg_L)，1:右腿(Leg_R)
  **/
-void WheelLeg_SpringComp(float Leg_Length_Feedback,float Leg_Length_Target,float *GasSpring_Output,uint8_t Leg_LR)
+void WheelLeg_SpringComp(Chassis_Leg_StructTypedef *Leg)
 {
-    if(Leg_LR == Leg_L)
+    if(Leg->Leg_LR == Leg_L)
     {
-        *GasSpring_Output = Motor_Compensation_Get_Data(Leg_Length_Feedback, Leg_Length_Target-Leg_Length_Feedback, &L0_Leg_L_Compensation_Config);
+        Leg->GasSpring_Output = Motor_Compensation_Get_Data(Leg->Length_Feedback, Leg->Length_Target-Leg->Length_Feedback, &L0_Leg_L_Compensation_Config);
     }
-    else if(Leg_LR == Leg_R)
+    else if(Leg->Leg_LR == Leg_R)
     {
-        *GasSpring_Output = Motor_Compensation_Get_Data(Leg_Length_Feedback, Leg_Length_Target-Leg_Length_Feedback, &L0_Leg_R_Compensation_Config);
+        Leg->GasSpring_Output = Motor_Compensation_Get_Data(Leg->Length_Feedback, Leg->Length_Target-Leg->Length_Feedback, &L0_Leg_R_Compensation_Config);
     }
     else
     {
-        *GasSpring_Output = 0;
+        Leg->GasSpring_Output = 0;
     }
 }
 

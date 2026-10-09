@@ -12,7 +12,7 @@
 #include "INS.h"
 #include "Motor_DJI_Driver.h"
 #include "Motor_DAMIAO_Driver.h"
-#include "Motor_Unitree_Driver.h"
+#include "Motor_Driver.h"
 #include "Communicate.h"
 
 uint16_t CAN1_Err_Ticker;
@@ -32,19 +32,15 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
     if(hfdcan == &hfdcan3) CAN3_Err_Ticker = 0;
 	
     CAN_RX_ID = RxHeader.Identifier;
-
+    
         /*===| 轮电机数据 |===*/
-	    if 		(hfdcan == &Chassis_DriverMotor_CAN  && CAN_RX_ID == Chassis_Motor1_Feedback_CAN_ID)   Motor_DJI_Storage_Data(CAN_RX_Data1,&Motor_Data_Struct[Chassis_DriverMotor1_ID]);
-		else if (hfdcan == &Chassis_DriverMotor_CAN  && CAN_RX_ID == Chassis_Motor2_Feedback_CAN_ID)   Motor_DJI_Storage_Data(CAN_RX_Data1,&Motor_Data_Struct[Chassis_DriverMotor2_ID]);
+	         if (hfdcan == &Chassis_DriverMotor_CAN  && CAN_RX_ID == Chassis_Motor1_Feedback_CAN_ID)    Motor_DJI_Storage_Data(CAN_RX_Data1,&Mo);
+		else if (hfdcan == &Chassis_DriverMotor_CAN  && CAN_RX_ID == Chassis_Motor2_Feedback_CAN_ID)    Motor_DJI_Storage_Data(CAN_RX_Data1,tor.Wheel_Motor1&Motor.Wheel_Motor2);
         
-		else if (hfdcan == &Chassis_JointMotor_CAN	&&	CAN_RX_ID == Chassis_JointMotor1_Feedback_ID) 
-			Motor_DM_Storage_Data(CAN_RX_Data1,&Motor_Data_Struct[Chassis_Joint1_ID]);
-		else if (hfdcan == &Chassis_JointMotor_CAN	&&	CAN_RX_ID == Chassis_JointMotor2_Feedback_ID) 
-			Motor_DM_Storage_Data(CAN_RX_Data1,&Motor_Data_Struct[Chassis_Joint2_ID]);
-		else if (hfdcan == &Chassis_JointMotor_CAN	&&	CAN_RX_ID == Chassis_JointMotor3_Feedback_ID) 
-			Motor_DM_Storage_Data(CAN_RX_Data1,&Motor_Data_Struct[Chassis_Joint3_ID]);
-		else if (hfdcan == &Chassis_JointMotor_CAN	&&	CAN_RX_ID == Chassis_JointMotor4_Feedback_ID) 
-			Motor_DM_Storage_Data(CAN_RX_Data1,&Motor_Data_Struct[Chassis_Joint4_ID]);
+		else if (hfdcan == &Chassis_JointMotor_CAN	&&	CAN_RX_ID == Chassis_JointMotor1_Feedback_ID)   Motor_DM_Storage_Data(CAN_RX_Data1,&Motor.Joint1);
+		else if (hfdcan == &Chassis_JointMotor_CAN	&&	CAN_RX_ID == Chassis_JointMotor2_Feedback_ID)   Motor_DM_Storage_Data(CAN_RX_Data1,&Motor.Joint2);
+		else if (hfdcan == &Chassis_JointMotor_CAN	&&	CAN_RX_ID == Chassis_JointMotor3_Feedback_ID)   Motor_DM_Storage_Data(CAN_RX_Data1,&Motor.Joint3);
+		else if (hfdcan == &Chassis_JointMotor_CAN	&&	CAN_RX_ID == Chassis_JointMotor4_Feedback_ID)   Motor_DM_Storage_Data(CAN_RX_Data1,&Motor.Joint4);
 						
         /*===| 超电数据 |===*/  
         else if (hfdcan == &SuperCap_CAN        && CAN_RX_ID == SuperCap_FeedBack_CAN_ID) SuperCap_Unpack_Data(CAN_RX_Data1);

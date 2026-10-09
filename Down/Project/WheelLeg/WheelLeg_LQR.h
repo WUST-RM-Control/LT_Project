@@ -3,91 +3,59 @@
 
 #include "main.h"
 
-
-// 上交 WBR 模型：10维状态，4维控制输入
-#define WHEELLEG_LQR_STATE_NUM    10U
-#define WHEELLEG_LQR_CONTROL_NUM   4U
-
-// K(ll, lr)使用6项二元二次多项式
-#define WHEELLEG_LQR_GAIN_BASIS_NUM    6U
-
-// 真实K拟合系数尚未生成  后续填入本机模型得到的系数后再改为1
-#define WHEELLEG_LQR_GAIN_COEFF_READY  1U
-
-typedef enum
+typedef struct
 {
-    WHEELLEG_LQR_STATE_S = 0,          // x0：前后位移 s 
-    WHEELLEG_LQR_STATE_S_DOT,          // x1：前后速度 s_dot 
-
-    WHEELLEG_LQR_STATE_YAW,            // x2：偏航角 phi 
-    WHEELLEG_LQR_STATE_YAW_DOT,        // x3：偏航角速度 phi_dot 
-
-    WHEELLEG_LQR_STATE_LEFT_LEG,       // x4：左腿绝对倾角 
-    WHEELLEG_LQR_STATE_LEFT_LEG_DOT,   // x5：左腿绝对角速度 
-
-    WHEELLEG_LQR_STATE_RIGHT_LEG,      // x6：右腿绝对倾角 
-    WHEELLEG_LQR_STATE_RIGHT_LEG_DOT,  // x7：右腿绝对角速度 
-
-    WHEELLEG_LQR_STATE_BODY_PITCH,     // x8：机体倾角 theta_b 
-    WHEELLEG_LQR_STATE_BODY_PITCH_DOT  // x9：机体角速度 
-} WheelLeg_LQR_StateIndex;
-
-typedef enum
-{
-    WHEELLEG_LQR_OUTPUT_LEFT_WHEEL = 0,  // u0：左轮转矩 T_lw,l
-    WHEELLEG_LQR_OUTPUT_RIGHT_WHEEL,     // u1：右轮转矩 T_lw,r
-
-    WHEELLEG_LQR_OUTPUT_LEFT_LEG,        // u2：左腿转矩 T_bl,l
-    WHEELLEG_LQR_OUTPUT_RIGHT_LEG        // u3：右腿转矩 T_bl,r
-} WheelLeg_LQR_OutputIndex;
-
-
+    //轮子的未滤波数据
+    float Wheel_Speed_Feedback;	//m/s，与底盘机械正方向一致(轮速度，存在打滑)
+    float Displacement_Now;		//m，当前轮位移,与轮方向一致
+    float Displacement_Init;	//m，开始LQR运控时轮位移,与轮方向一致
+    float Displacement;			//m，用于LQR运控的轮位移，与底盘机械正方向一致，+-(Displacement_Now-Displacement_Init)
+	
+} WheelLeg_LQR_Displacement_Date;
 
 typedef struct
 {
-    // 实际状态 x
-    float state[WHEELLEG_LQR_STATE_NUM];
+	//LQR
+		/*===| 8个状态量 |===*/
+		//0:无
+		//1:L_杆与竖直方向夹角
+		//2:L_杆与竖直方向夹角dot
+		//3:位移
+		//4:位移dot
+		//5:Pitch
+		//6:Pitch_Dot
+		//7:R_杆与竖直方向夹角
+		//8:R_杆与竖直方向夹角dot
+		float State[9];
 
-    // 目标状态 xd
-    float target[WHEELLEG_LQR_STATE_NUM];
+        float LQR_K_Left[12];
 
-    // 状态误差 xd - x
-    float error[WHEELLEG_LQR_STATE_NUM];
+        float LQR_K_Right[12];
 
-    // 状态反馈矩阵 K
-    float gain[WHEELLEG_LQR_CONTROL_NUM]
-              [WHEELLEG_LQR_STATE_NUM];
 
-    // 控制输出 u
-    float output[WHEELLEG_LQR_CONTROL_NUM];
+    //底盘位移
+    float Wheel_Displacement_Feedback;  //底盘位移，与底盘机械正方向一致
+    float Wheel_Displacement_Target;    //RoboControl_Struct目标速度积分得到
 
-    // 当前左右腿长
-    // 后续用于计算 K(ll, lr)
-    float left_leg_length_m;
-    float right_leg_length_m;
+    float Wheel_Speed_Feedback;         //底盘速度(滤波后)，与底盘机械正方向一致
+    float Wheel_Speed_Target;           //m/s，RoboControl_Struct赋值(Vy)
 
-    // 10维状态是否有效
-    uint8_t state_valid;
 
-    // 目标状态是否已经初始化
-    uint8_t target_valid;
+    float Wheel_displacement_add;       //目标速度积分目标位移得到
+    float Wheel_displacement_init;      //正常运动开始时的位移，恢复正常运动时的Wheel_Displacement_Feedback赋值
+    float Wheel_Speed_Target_Last;
 
-    // 当前状态反馈矩阵K是否有效
-    uint8_t gain_valid;
+    //LQR运控PID补丁
+        //转向&小陀螺
+	    PID_Struct_TypeDef Wheel_Wz_Speed_PID;
+        //防劈叉
+	    PID_Struct_TypeDef Leg_Splits_PID;
+        
 
-    // LQR状态是否有效
-    uint8_t valid;
-
-} WheelLeg_LQR;
-
-extern WheelLeg_LQR wheelLeg_lqr;
+} WheelLeg_LQR_StructTypeDef;
 
 void WheelLeg_LQR_Init(void);
 
-void WheelLeg_LQR_Update(float dt);
-
-void WheelLeg_LQR_CaptureTarget(void);
-
-void WheelLeg_LQR_ClearTarget(void);
+void WheelLeg_LQR_Output(Chassis_Control_StructTypedef *Chassis_Control);
 
 #endif

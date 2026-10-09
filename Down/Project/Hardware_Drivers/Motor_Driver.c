@@ -7,7 +7,7 @@
 
 /*===| 电机数据结构体 |===*/
 
-Motor_Data_StructTypeDef Motor_Data_Struct[14] = {0};
+Motor_StructTypedef Motor = {0};
 
 void Get_TotalAngle_Speed(Motor_Data_StructTypeDef *Motor_Data_Struct)
 {

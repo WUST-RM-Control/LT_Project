@@ -159,8 +159,8 @@ void StartDefaultTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-      Get_TotalAngle_Speed(&Motor_Data_Struct[Gimbal_Pitch_ID]);
-      Get_TotalAngle_Speed(&Motor_Data_Struct[Gimbal_Yaw_ID]);
+      Get_TotalAngle_Speed(&Motor.Wheel_Motor1);
+      Get_TotalAngle_Speed(&Motor.Wheel_Motor2);
     osDelay(10);
   }
   /* USER CODE END StartDefaultTask */

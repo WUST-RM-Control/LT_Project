@@ -113,11 +113,10 @@
 
 
 /*===| 底盘计算参数定义 |===*/
-	#define    L1u  0.21
-	#define    L1d  0.25
-	#define    L2u  0.21
-	#define    L2d  0.25
-	
+	#define 	PI   3.14159265359f
+	#define 	Angle_to_Radain	 0.0174533f //角度to弧度(PI/180)
+    #define	    Radain_to_Angle	 57.29578f  //弧度to角度(180/PI)
+    
 	#define 	MB    13
 	#define 	RL_W  0.523
 	#define 	Q_L_F 0 

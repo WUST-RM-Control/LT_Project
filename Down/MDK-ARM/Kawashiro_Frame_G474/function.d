@@ -90,5 +90,5 @@
   ..\Project\Commnuicate_Drivers\CAN_Driver.h \
   ..\Project\Commnuicate_Drivers\USART_Driver.h \
   ..\Project\Commnuicate_Drivers\USB_Driver.h ..\Project\BSP\DWT.h \
-  ..\Project\Algorithm_Drivers\crc8_crc16.h \
+  ..\Project\BSP\Buzzer.h ..\Project\Algorithm_Drivers\crc8_crc16.h \
   ..\Project\Hardware_Drivers\Motor_Driver.h ..\Project\BSP\flash.h

@@ -90,9 +90,8 @@
   ..\Project\Commnuicate_Drivers\USART_Driver.h \
   ..\Project\Commnuicate_Drivers\USB_Driver.h \
   ..\Project\Algorithm_Drivers\Function.h ..\Project\BSP\DWT.h \
-  ..\Project\Algorithm_Drivers\crc8_crc16.h \
+  ..\Project\BSP\Buzzer.h ..\Project\Algorithm_Drivers\crc8_crc16.h \
   ..\Project\Hardware_Drivers\Motor_Driver.h ..\Project\BSP\flash.h \
-  ..\Project\Algorithm_Drivers\kalman_filter.h \
   ..\Project\Robot_Application\RoboControl.h \
   ..\Project\Robot_Application\Shoot.h \
   ..\Project\Robot_Application\ErrorHandle.h \
@@ -102,5 +101,6 @@
   ..\Project\Hardware_Drivers\Motor_DAMIAO_Driver.h \
   ..\Project\Hardware_Drivers\Referee_Unpack.h \
   ..\Project\Algorithm_Drivers\Vofa.h ..\Project\Robot_Application\INS.h \
-  ..\Project\BSP\Buzzer.h ..\Project\Algorithm_Drivers\user_lib.h \
-  ..\Project\Hardware_Drivers\Remote_Control.h
+  ..\Project\Algorithm_Drivers\user_lib.h \
+  ..\Project\Hardware_Drivers\Remote_Control.h \
+  ..\Project\Algorithm_Drivers\kalman_filter.h

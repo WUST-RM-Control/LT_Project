@@ -52,8 +52,8 @@ void Chassis_Receive_attitude_Pack(uint8_t *Data)
     RoboControl_Struct.Shoot_State                     = Double_Board_Up_to_Down.Shoot_State;
     RoboControl_Struct.Gimbal_State                    = Double_Board_Up_to_Down.Gimbal_State;
 	
-	Motor_Data_Struct[Shoot_Fric_First_Left_ID].Speed_RPM				= Double_Board_Up_to_Down.Fric1_Speed ;
-	Motor_Data_Struct[Shoot_Fric_First_Right_ID].Speed_RPM 				= Double_Board_Up_to_Down.Fric2_Speed ;
+	Motor.Shoot_Fric_First_Left.Speed_RPM				= Double_Board_Up_to_Down.Fric1_Speed ;
+	Motor.Shoot_Fric_First_Right.Speed_RPM 				= Double_Board_Up_to_Down.Fric2_Speed ;
     
     INS_Data_Gimbal.Pitch                              = Double_Board_Up_to_Down.Gimbal_Pitch;
 

@@ -21,15 +21,12 @@
 
 /*===| 机器人整体状态数据结构体 |===*/
 RoboControl_StructTypeDef RoboControl_Struct;
-PcControl_StructTypeDef PC_Control_Struct;
 
 /*===| 计算Wz的PID结构体 |===*/
 PID_Struct_TypeDef RoboWz_PID_Struct;
 
 uint16_t Board_Commnuicate_Error_Ticker;
 uint8_t IF_Chassis_Online;
-
-uint8_t count=0;
 
 extern float Steer_Total_angle_Target;
 extern float Steer_Total_angle_Feedback;

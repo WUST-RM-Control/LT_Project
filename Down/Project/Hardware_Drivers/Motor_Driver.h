@@ -25,8 +25,39 @@ typedef struct
 	uint8_t Error_ID;
 } Motor_Data_StructTypeDef;
 
+
+/**
+ * @brief 电机结构体定义
+ * @note 裁判主控一侧为车头，灯条一侧为车尾，以车为参考，左手边为左腿
+ * @note 关节电机对应关系:Joint1(左腿车头)、Joint2(左腿车尾)、Joint3(右腿车头)、Joint4(右腿车尾)
+ * 
+ */
+typedef __PACKED_STRUCT
+{
+    Motor_Data_StructTypeDef Wheel_Motor1;  //左腿轮电机
+    Motor_Data_StructTypeDef Wheel_Motor2;  //右腿轮电机
+    
+    Motor_Data_StructTypeDef Joint1;    //左腿车头
+    Motor_Data_StructTypeDef Joint2;    //左腿车尾
+    Motor_Data_StructTypeDef Joint3;    //右腿车头
+    Motor_Data_StructTypeDef Joint4;    //右腿车尾
+    
+    // Motor_Data_StructTypeDef Gimbal_Pitch;
+    // Motor_Data_StructTypeDef Gimbal_Yaw;
+
+    //用于UI显示
+    Motor_Data_StructTypeDef Shoot_Fric_First_Left;
+    Motor_Data_StructTypeDef Shoot_Fric_First_Right;
+    // Motor_Data_StructTypeDef Shoot_Fric_First_Middle;
+    // Motor_Data_StructTypeDef Shoot_Trigger;
+    // Motor_Data_StructTypeDef Shoot_Fric_Second_Left;
+    // Motor_Data_StructTypeDef Shoot_Fric_Second_Right;
+    // Motor_Data_StructTypeDef Shoot_Fric_Second_Middle;
+
+} Motor_StructTypedef;
+
 /*===| 电机数据结构体 |===*/
-extern Motor_Data_StructTypeDef Motor_Data_Struct[14];
+extern Motor_StructTypedef Motor;
 
 void Get_TotalAngle_Speed(Motor_Data_StructTypeDef *Motor_Data_Struct);
 

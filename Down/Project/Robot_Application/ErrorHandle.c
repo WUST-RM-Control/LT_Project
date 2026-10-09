@@ -149,59 +149,59 @@ void ErrorHandle_Task(void *argument)
         }
 
 		/*===| 轮电机离线检测 |===*/
-		Motor_Data_Struct[5].Ticker++; 
-		if(Motor_Data_Struct[5].Ticker >= 100) Motor_Data_Struct[5].If_Online = 0; 
-		if(Motor_Data_Struct[5].Ticker >  110) Motor_Data_Struct[5].Ticker = 100;
+		Motor.Wheel_Motor1.Ticker++; 
+		if(Motor.Wheel_Motor1.Ticker >= 100) Motor.Wheel_Motor1.If_Online = 0; 
+		if(Motor.Wheel_Motor1.Ticker >  110) Motor.Wheel_Motor1.Ticker = 100;
 		
-        Motor_Data_Struct[6].Ticker++; 
-		if(Motor_Data_Struct[6].Ticker >= 100) Motor_Data_Struct[6].If_Online = 0; 
-		if(Motor_Data_Struct[6].Ticker >  110) Motor_Data_Struct[6].Ticker = 100;
+        Motor.Wheel_Motor2.Ticker++; 
+		if(Motor.Wheel_Motor2.Ticker >= 100) Motor.Wheel_Motor2.If_Online = 0; 
+		if(Motor.Wheel_Motor2.Ticker >  110) Motor.Wheel_Motor2.Ticker = 100;
 		
-        if(Motor_Data_Struct[5].If_Online == 0 && Motor_Data_Struct[6].If_Online == 0)
+        if(Motor.Wheel_Motor1.If_Online == 0 && Motor.Wheel_Motor2.If_Online == 0)
         {
             Robo_Stop();
         }
 
 		/*===| 关节电机离线检测 |===*/
-		Motor_Data_Struct[1].Ticker++; 
-		if(Motor_Data_Struct[1].Ticker >= 100) Motor_Data_Struct[1].If_Online = 0; 
-		if(Motor_Data_Struct[1].Ticker >  110) Motor_Data_Struct[1].Ticker = 100;
+		Motor.Joint1.Ticker++; 
+		if(Motor.Joint1.Ticker >= 100) Motor.Joint1.If_Online = 0; 
+		if(Motor.Joint1.Ticker >  110) Motor.Joint1.Ticker = 100;
 		
-        Motor_Data_Struct[2].Ticker++; 
-		if(Motor_Data_Struct[2].Ticker >= 100) Motor_Data_Struct[2].If_Online = 0; 
-		if(Motor_Data_Struct[2].Ticker >  110) Motor_Data_Struct[2].Ticker = 100;
+        Motor.Joint2.Ticker++; 
+		if(Motor.Joint2.Ticker >= 100) Motor.Joint2.If_Online = 0; 
+		if(Motor.Joint2.Ticker >  110) Motor.Joint2.Ticker = 100;
 		
-        Motor_Data_Struct[3].Ticker++; 
-		if(Motor_Data_Struct[3].Ticker >= 100) Motor_Data_Struct[3].If_Online = 0; 
-		if(Motor_Data_Struct[3].Ticker >  110) Motor_Data_Struct[3].Ticker = 100;
+        Motor.Joint3.Ticker++; 
+		if(Motor.Joint3.Ticker >= 100) Motor.Joint3.If_Online = 0; 
+		if(Motor.Joint3.Ticker >  110) Motor.Joint3.Ticker = 100;
 		
-        Motor_Data_Struct[4].Ticker++; 
-		if(Motor_Data_Struct[4].Ticker >= 100) Motor_Data_Struct[4].If_Online = 0; 
-		if(Motor_Data_Struct[4].Ticker >  110) Motor_Data_Struct[4].Ticker = 100;
+        Motor.Joint4.Ticker++; 
+		if(Motor.Joint4.Ticker >= 100) Motor.Joint4.If_Online = 0; 
+		if(Motor.Joint4.Ticker >  110) Motor.Joint4.Ticker = 100;
         
 		/*===| 关节电机离线断连处理 |===*/
-        if(Motor_Data_Struct[1].Ticker == 110)      
+        if(Motor.Joint1.Ticker == 110)      
         {
             Motor_DM_CMD_ClearErr(&Chassis_JointMotor_CAN, Chassis_JointMotor1_Send_CAN_ID);
             osDelay(1);
             Motor_DM_CMD_Enable(&Chassis_JointMotor_CAN,Chassis_JointMotor1_Send_CAN_ID);
 			osDelay(1);
         }
-		if(Motor_Data_Struct[2].Ticker == 110)      
+		if(Motor.Joint2.Ticker == 110)      
         {
             Motor_DM_CMD_ClearErr(&Chassis_JointMotor_CAN, Chassis_JointMotor2_Send_CAN_ID);
             osDelay(1);
             Motor_DM_CMD_Enable(&Chassis_JointMotor_CAN,Chassis_JointMotor2_Send_CAN_ID);
 			osDelay(1);
         }
-		if(Motor_Data_Struct[3].Ticker == 110)      
+		if(Motor.Joint3.Ticker == 110)      
         {
             Motor_DM_CMD_ClearErr(&Chassis_JointMotor_CAN, Chassis_JointMotor3_Send_CAN_ID);
             osDelay(1);
             Motor_DM_CMD_Enable(&Chassis_JointMotor_CAN,Chassis_JointMotor3_Send_CAN_ID);
 			osDelay(1);
         }
-		if(Motor_Data_Struct[4].Ticker == 110)      
+		if(Motor.Joint4.Ticker == 110)      
         {
             Motor_DM_CMD_ClearErr(&Chassis_JointMotor_CAN, Chassis_JointMotor4_Send_CAN_ID);
             osDelay(1);
@@ -222,7 +222,7 @@ void ErrorHandle_Task(void *argument)
 		
 //		UART4_Printf("%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",Chassis_Control_Struct.Left_Leg_Angle_dot,Filter_Left_Leg_Angle_dot,Chassis_Control_Struct.Pitch_Speed_fdb,Filter_Pitch_Speed_fdb,Chassis_Control_Struct.Volecity_Fdb,Filter_Volecity_Fdb,Chassis_Control_Struct.Left_Leg_Angle_dot_last,Chassis_Control_Struct.Pitch_Speed_fdb_last,Chassis_Control_Struct.Volecity_Fdb_last,Chassis_Control_Struct.Right_Leg_Angle_dot,Filter_Right_Leg_Angle_dot);
 
-//		UART4_Printf("%d,%d,%d,%d\n",Motor_Data_Struct[1].Error_ID,Motor_Data_Struct[2].Error_ID,Motor_Data_Struct[3].Error_ID,Motor_Data_Struct[4].Error_ID);
+//		UART4_Printf("%d,%d,%d,%d\n",Motor.Joint1.Error_ID,Motor.Joint2.Error_ID,Motor.Joint3.Error_ID,Motor.Joint4.Error_ID);
 
 //		UART4_Printf("%f,%f,%f,%d\n",K_slope,Chassis_Control_Struct.F_L,Chassis_Control_Struct.F_R,Chassis_Control_Struct.Jump_State);
 //		UART4_Printf("%f,%f,%f,%f\n",Chassis_Control_Struct.Chassis_Vy_Target,Chassis_Control_Struct.Volecity_Fdb,Chassis_Control_Struct.Target_displacement,Chassis_Control_Struct.displacement);
