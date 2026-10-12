@@ -11,7 +11,7 @@
 //float CAM_X_ADD = 13;
 //float CAM_Y_ADD = -45;
 
-//int UI_SELF_ID;
+int UI_SELF_ID;
 
 //UI_State_StructTypedef UI_State;
 

@@ -27,7 +27,7 @@
 INS_Data_StructTypedef INS_Data_Gimbal = {0};
 INS_Data_StructTypedef INS_Data_Self = {0};
 
-extern INS_t INS;
+INS_t INS;
 IMU_Param_t IMU_Param;
 
 PID_Struct_TypeDef TempCtrl_PID_Struct;

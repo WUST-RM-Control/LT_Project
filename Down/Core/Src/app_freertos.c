@@ -302,9 +302,11 @@ __weak void Buzzer_Task(void const * argument)
 __weak void UI_Task(void const * argument)
 {
   /* USER CODE BEGIN UI_Task */
+  osDelay(1000);
   /* Infinite loop */
   for(;;)
   {
+    VOFA_JustFloat_Send(&huart4);
     osDelay(1);
   }
   /* USER CODE END UI_Task */

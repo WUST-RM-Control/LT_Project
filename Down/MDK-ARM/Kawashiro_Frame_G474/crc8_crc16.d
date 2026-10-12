@@ -92,4 +92,4 @@
   ..\Project\Commnuicate_Drivers\USB_Driver.h \
   ..\Project\Algorithm_Drivers\Function.h ..\Project\BSP\DWT.h \
   ..\Project\BSP\Buzzer.h ..\Project\Hardware_Drivers\Motor_Driver.h \
-  ..\Project\BSP\flash.h
+  ..\Project\BSP\flash.h ..\Project\Algorithm_Drivers\Vofa.h

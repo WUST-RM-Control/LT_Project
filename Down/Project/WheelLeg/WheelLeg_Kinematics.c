@@ -50,10 +50,48 @@ static PosVelKF_t L_A0_KF, R_A0_KF; // 左右腿腿摆角(总角度)
 
 // 整定参数: Q_acc=加速度过程噪声方差, R=位置量测噪声方差
 // 位置更平滑 -> 减小Q_acc或增大R; 速度响应更快 -> 增大Q_acc或减小R
-#define L0_KF_Q_ACC 50.0f  // (m/s^2)^2, 腿长加速度噪声
+#define L0_KF_Q_ACC 50.0f   // (m/s^2)^2, 腿长加速度噪声
 #define L0_KF_R     1.0e-6f // m^2,       腿长位置量测噪声
 #define A0_KF_Q_ACC 3.0e6f  // (deg/s^2)^2, 腿摆角加速度噪声
 #define A0_KF_R     2.5e-3f // deg^2,      腿摆角位置量测噪声
+
+/**
+ * @brief 初始化2状态(位置-速度)卡尔曼滤波器
+ *
+ * @param kf    滤波器结构体
+ * @param Q_acc 加速度过程噪声方差, 越大越信任量测、速度响应越快但越抖
+ * @param R     位置量测噪声方差, 越大越信任模型、位置越平滑但延迟越大
+ * @param P0    初始位置方差
+ * @param V0    初始速度方差
+ */
+void PosVelKF_Init(PosVelKF_t *kf, float Q_acc, float R, float P0, float V0)
+{
+    kf->x = 0.0f;
+    kf->v = 0.0f;
+    kf->P[0] = 1.0f;
+    kf->P[1] = 0.0f;
+    kf->P[2] = 0.0f;
+    kf->P[3] = 1.0f;
+    kf->Q_acc = Q_acc;
+    kf->R = R;
+    kf->P0 = P0;
+    kf->V0 = V0;
+    kf->Init = 0;
+}
+
+/**
+ * @brief ===| 运动学解算初始化 |===
+ *
+ * @note 必须在 WheelLeg_Kinematics_Update 之前调用一次, 否则滤波器参数全为0
+ */
+void WheelLeg_Kinematics_Init(void)
+{
+	PosVelKF_Init(&L_L0_KF, L0_KF_Q_ACC, L0_KF_R, 1.0e-6f, 1.0f);
+	PosVelKF_Init(&R_L0_KF, L0_KF_Q_ACC, L0_KF_R, 1.0e-6f, 1.0f);
+	PosVelKF_Init(&L_A0_KF, A0_KF_Q_ACC, A0_KF_R, 1.0e-2f, 1.0e3f);
+	PosVelKF_Init(&R_A0_KF, A0_KF_Q_ACC, A0_KF_R, 1.0e-2f, 1.0e3f);
+}
+
 /**
  * @brief 2状态(位置-速度)卡尔曼滤波更新
  *
@@ -94,6 +132,9 @@ static void PosVelKF_Update(PosVelKF_t *kf, float z, float dt)
 
     // 3. 卡尔曼增益 K = P'(k) H^T / (H P'(k) H^T + R),  H = [1 0]
     s = p00 + kf->R;
+    // 分母非法(0或NaN)时跳过, 防止 0/0 产生NaN并永久污染滤波器状态
+    if (!(s > 0.0f))
+        return;
     k0 = p00 / s;
     k1 = p10 / s;
 
@@ -202,7 +243,7 @@ static void WheelLeg_ForwardKinematics(WheelLeg_LegKinematics_StructTypedef *Leg
 
 
 	//Feedback数据赋值
-	Leg_Date->Angle_Feedback_No_kalman = L0;
+	Leg_Date->Length_Feedback_No_kalman = L0;
 	Leg_Date->Angle_Feedback_No_kalman = Caculate_Included_Angle(90.0f,phi0);
 	
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -255,7 +296,7 @@ static void WheelLeg_Kinematics_Assign(Chassis_Leg_StructTypedef *Chassis_Leg_Da
 }
 
 //运动学数据更新
-void WheelLeg_Kinematics_Update(Chassis_Control_StructTypedef *Chassis_Control_Struct,const float dt)
+void WheelLeg_Kinematics_Update(Chassis_Control_StructTypedef *Chassis_Control_Struct)
 {
     //运动学结束算
     WheelLeg_ForwardKinematics(&wheelLeg_kinematics_Struct.Left,  Chassis_Control_Struct->Leg_Left.Jt,  Motor.Joint1.Angle, Motor.Joint2.Angle);
@@ -265,10 +306,20 @@ void WheelLeg_Kinematics_Update(Chassis_Control_StructTypedef *Chassis_Control_S
     WheelLeg_Kinematics_Assign(&Chassis_Control_Struct->Leg_Left, wheelLeg_kinematics_Struct.Left);
     WheelLeg_Kinematics_Assign(&Chassis_Control_Struct->Leg_Right,wheelLeg_kinematics_Struct.Right);
 
+	VOFA_JustFloat_AddValue(5,Chassis_Control_Struct->Leg_Left.Total_Angle_Feedback);
+	VOFA_JustFloat_AddValue(6,Chassis_Control_Struct->Leg_Right.Total_Angle_Feedback);
+
     //卡尔曼滤波
     //位置-速度卡尔曼滤波
-    Leg_State_KF_Update(&Chassis_Control_Struct->Leg_Left,  &L_L0_KF, &L_A0_KF, dt);
-    Leg_State_KF_Update(&Chassis_Control_Struct->Leg_Right, &R_L0_KF, &R_A0_KF, dt);
+    Leg_State_KF_Update(&Chassis_Control_Struct->Leg_Left,  &L_L0_KF, &L_A0_KF, Chassis_Control_Struct->Chassis_Dt);
+    Leg_State_KF_Update(&Chassis_Control_Struct->Leg_Right, &R_L0_KF, &R_A0_KF, Chassis_Control_Struct->Chassis_Dt);
 	
+	//底盘状态数据计算
+	Chassis_Control_Struct->Chassis_Control.Leg_Length_Feebback = (Chassis_Control_Struct->Leg_Left.Length_Feedback + Chassis_Control_Struct->Leg_Right.Length_Feedback)*0.5;
+
+	VOFA_JustFloat_AddValue(1,Chassis_Control_Struct->Leg_Left.Total_Angle_Feedback);
+	VOFA_JustFloat_AddValue(2,Chassis_Control_Struct->Leg_Right.Total_Angle_Feedback);
+	VOFA_JustFloat_AddValue(3,Chassis_Control_Struct->Leg_Left.Total_Angle_Speed);
+	VOFA_JustFloat_AddValue(4,Chassis_Control_Struct->Leg_Right.Total_Angle_Speed);
 }
 

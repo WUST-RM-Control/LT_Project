@@ -1,20 +1,20 @@
-////======================================================================
-////                      Shoot[发射机构控制]
-////      根据RoboControl中的Shoot_State驱动相应电机实现单发，连发等功能
-////======================================================================
+//======================================================================
+//                      Shoot[发射机构控制]
+//      根据RoboControl中的Shoot_State驱动相应电机实现单发，连发等功能
+//======================================================================
 
-//#include "Shoot.h"
-//#include "RoboControl.h"
-//#include "Motor_DJI_Driver.h"
-//#include "Motor_DAMIAO_Driver.h"
-//#include "Motor_Unitree_Driver.h"
-//#include "Referee_Unpack.h"
-//#include "Communicate.h"
-//#include "Aim.h"
+#include "Shoot.h"
+#include "RoboControl.h"
+#include "Motor_DJI_Driver.h"
+#include "Motor_DAMIAO_Driver.h"
+#include "Motor_Unitree_Driver.h"
+#include "Referee_Unpack.h"
+#include "Communicate.h"
+#include "Aim.h"
 
-///*===| 发送控制数据结构体 |===*/
+/*===| 发送控制数据结构体 |===*/
 
-//Shoot_Control_StructTypeDef Shoot_Control_Struct;
+Shoot_Control_StructTypeDef Shoot_Control_Struct;
 
 //float Shoot_Fric_First_Left_Speed    = 20.0;
 //float Shoot_Fric_First_Right_Speed   = 20.0;

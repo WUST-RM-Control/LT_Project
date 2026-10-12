@@ -93,12 +93,13 @@
   ..\Project\Algorithm_Drivers\Function.h ..\Project\BSP\DWT.h \
   ..\Project\BSP\Buzzer.h ..\Project\Algorithm_Drivers\crc8_crc16.h \
   ..\Project\Hardware_Drivers\Motor_Driver.h ..\Project\BSP\flash.h \
+  ..\Project\Algorithm_Drivers\Vofa.h \
   ..\Project\Robot_Application\RoboControl.h \
   ..\Project\Robot_Application\Chassis.h \
   ..\Project\Robot_Application\Shoot.h \
   ..\Project\Robot_Application\ErrorHandle.h \
   ..\Project\Robot_Application\INS.h \
   ..\Project\Hardware_Drivers\SuperCap_Driver.h \
-  ..\Project\Algorithm_Drivers\Vofa.h ..\Project\Robot_Application\Aim.h \
+  ..\Project\Robot_Application\Aim.h \
   ..\Project\Hardware_Drivers\Remote_Control.h \
   ..\Project\Hardware_Drivers\Referee_Unpack.h

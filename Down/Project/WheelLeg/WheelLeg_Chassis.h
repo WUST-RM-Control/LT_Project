@@ -1,41 +1,9 @@
-// #ifndef _WheelLeg_Chassis_
-// #define _WheelLeg_Chassis_
+#ifndef _WheelLeg_Chassis_
+#define _WheelLeg_Chassis_
 
-// #include "main.h"
+#include "main.h"
+#include "Chassis.h"
 
-// typedef struct
-// {
-//     float left_force_n;
-//     float right_force_n;
+int8_t Chassis_Smooth_Restand(Chassis_Control_StructTypedef *Chassis_Control);
 
-//     float left_tp_nm;
-//     float right_tp_nm;
-
-//     float left_wheel_torque_nm;
-//     float right_wheel_torque_nm;
-
-//     uint8_t valid;
-
-// } WheelLeg_ControlCommand;
-
-// typedef enum
-// {
-//     WHEELLEG_MODE_DISABLE = 0,
-//     WHEELLEG_MODE_PREPARE,
-//     WHEELLEG_MODE_BALANCE
-
-// } WheelLeg_ControlMode;
-
-// extern WheelLeg_ControlMode wheelLeg_controlMode;
-// extern volatile uint8_t WheelLeg_Enable_Request;
-
-// extern WheelLeg_ControlCommand wheelLeg_controlCommand;
-
-// extern volatile uint8_t WheelLeg_Balance_Request;
-
-
-
-// void WheelLeg_Chassis_Task(void const *argument);
-
-
-// #endif
+#endif

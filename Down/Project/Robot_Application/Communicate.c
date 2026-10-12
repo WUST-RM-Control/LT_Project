@@ -170,9 +170,18 @@ void Chassis_Send_Referee_Unpack(void)
 
 void Chassis_Send_Func_Data(void)
 {
-	Double_Board_Down_to_UP.Recover_from_ground_Flag   = Chassis_Control_Struct.Recover_from_ground_Flag;
-    Double_Board_Down_to_UP.Chassis_Odometer_Vxx100    = Chassis_Control_Struct.Volecity_Fdb*arm_cos_f32(RoboControl_Struct.Yaw_Err * Angle2Radain) * 100.0f;
-    Double_Board_Down_to_UP.Chassis_Odometer_Vyx100    = Chassis_Control_Struct.Volecity_Fdb*arm_sin_f32(RoboControl_Struct.Yaw_Err * Angle2Radain) * 100.0f;
+	if(Chassis_Control_Struct.Chassis_Control.Chassis_State == Chassis_Recover
+	|| Chassis_Control_Struct.Chassis_Control.Chassis_State == Chassis_RESET
+	|| Chassis_Control_Struct.Chassis_Control.Chassis_State == Chassis_RESET_Slow)
+	{
+		Double_Board_Down_to_UP.Recover_from_ground_Flag = 1;
+	}
+	else
+	{
+		Double_Board_Down_to_UP.Recover_from_ground_Flag = 0;
+	}
+    Double_Board_Down_to_UP.Chassis_Odometer_Vxx100    = Chassis_Control_Struct.Chassis_Control.Chassis_Speed_Feedback*arm_cos_f32(RoboControl_Struct.Yaw_Err * Angle2Radain) * 100.0f;
+    Double_Board_Down_to_UP.Chassis_Odometer_Vyx100    = Chassis_Control_Struct.Chassis_Control.Chassis_Speed_Feedback*arm_sin_f32(RoboControl_Struct.Yaw_Err * Angle2Radain) * 100.0f;
 	Double_Board_Down_to_UP.null1 = 0;
 	Double_Board_Down_to_UP.null2 = 0;
 	CAN_Send_Data(&hfdcan3, 0x54, (uint8_t *)&Double_Board_Down_to_UP);

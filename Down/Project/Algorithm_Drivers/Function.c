@@ -105,6 +105,17 @@ void Update_Data(float *Array,uint8_t Length,float New_Data)
 	}
 	Array[0] = New_Data;
 }
+
+/*===| 输出缓加减速 |===*/
+void Acc_and_Dec(float Target, float *Output, float Acc, float Dec, float Dt)
+{
+    if      (Target - *Output > + Dt * Dec && *Output <= 0) *Output += Dt * Dec;
+    else if (Target - *Output > + Dt * Acc && *Output > 0)  *Output += Dt * Acc;
+    else if (Target - *Output < - Dt * Acc && *Output <= 0) *Output -= Dt * Acc;
+    else if (Target - *Output < - Dt * Dec && *Output > 0)  *Output -= Dt * Dec; 
+    else    *Output = Target;
+}
+
 /**
  * @brief 输出缓加速，减速
  *

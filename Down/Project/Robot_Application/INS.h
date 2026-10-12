@@ -80,8 +80,9 @@ typedef struct
     float Gyro[3];
 }INS_Data_StructTypedef;
 
-extern INS_Data_StructTypedef INS_Data_Gimbal;
-extern INS_Data_StructTypedef INS_Data_Self;
+extern INS_Data_StructTypedef INS_Data_Gimbal;  //云台数据
+extern INS_Data_StructTypedef INS_Data_Self;    
+extern INS_t INS;       //底盘数据(INS简化)
 //extern INS_t INS_Data_Accel;
 
 void INS_Init(void);

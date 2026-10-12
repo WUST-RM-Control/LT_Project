@@ -92,6 +92,7 @@
   ..\Project\Algorithm_Drivers\Function.h ..\Project\BSP\DWT.h \
   ..\Project\BSP\Buzzer.h ..\Project\Algorithm_Drivers\crc8_crc16.h \
   ..\Project\Hardware_Drivers\Motor_Driver.h ..\Project\BSP\flash.h \
+  ..\Project\Algorithm_Drivers\Vofa.h \
   ..\Project\Hardware_Drivers\SuperCap_Driver.h \
   ..\Project\Robot_Application\INS.h \
   ..\Project\Hardware_Drivers\Motor_DJI_Driver.h \

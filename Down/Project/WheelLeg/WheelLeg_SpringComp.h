@@ -83,7 +83,7 @@ void WheelLeg_SpringComp_Init(void);
 
 void WheelLeg_SpringComp(Chassis_Leg_StructTypedef *Leg);
 
-uint8_t WheelLeg_SpringComp_Measure_Task
+int8_t WheelLeg_SpringComp_Measure_Task
 (const uint8_t Leg_LR,
 const volatile uint8_t * const Enable_Output,
 void (* const Fun_Motor_Joint_Wheel_Output)(float,float,float,float,float,float),

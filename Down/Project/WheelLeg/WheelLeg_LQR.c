@@ -114,7 +114,7 @@ static void WheelLeg_LQR_Calculated_Displacement(Chassis_Control_StructTypedef *
 	else if (!was_moving && is_moving) 
 	{
 		// 记录起点的实际位移
-		WheelLeg_LQR_Struct.Wheel_displacement_init = WheelLeg_LQR_Struct.Target_displacement;
+		WheelLeg_LQR_Struct.Wheel_displacement_init = WheelLeg_LQR_Struct.Wheel_Displacement_Target;
 		// 【关键修复】清零积分器，防止历史脏数据导致瞬间跳跃
 		WheelLeg_LQR_Struct.Wheel_displacement_add = 0.0f;
 	}
@@ -124,25 +124,28 @@ static void WheelLeg_LQR_Calculated_Displacement(Chassis_Control_StructTypedef *
 		// 正常积分
 		WheelLeg_LQR_Struct.Wheel_displacement_add += Chassis_Control_Struct->Chassis_Control.Vy_Target * Chassis_Control_Struct->Chassis_Dt;
 		// 计算目标位移 = 起点位移 + 积分出来的位移增量
-		WheelLeg_LQR_Struct.Target_displacement = WheelLeg_LQR_Struct.Wheel_displacement_init + WheelLeg_LQR_Struct.Wheel_displacement_add;
+		WheelLeg_LQR_Struct.Wheel_Displacement_Target = WheelLeg_LQR_Struct.Wheel_displacement_init + WheelLeg_LQR_Struct.Wheel_displacement_add;
 	}
 
     WheelLeg_LQR_Struct.Wheel_Speed_Target = Chassis_Control_Struct->Chassis_Control.Vy_Target;
 
 //得到轮子的实际位移 Wheel_Displacement_Feedback
     Wheel_Left.Displacement_Now  = Motor.Wheel_Motor1.Total_Angle / Motor_3508_Reduction * Chassis_Wheel_Radius * Angle_to_Radain;
-    Wheel_Right.Displacement_Now = Motor.Wheel_Motor1.Total_Angle / Motor_3508_Reduction * Chassis_Wheel_Radius * Angle_to_Radain;
+    Wheel_Right.Displacement_Now = Motor.Wheel_Motor2.Total_Angle / Motor_3508_Reduction * Chassis_Wheel_Radius * Angle_to_Radain;
     Wheel_Left.Displacement  = -(Wheel_Left.Displacement_Now  - Wheel_Left.Displacement_Init);
     Wheel_Right.Displacement =   Wheel_Right.Displacement_Now - Wheel_Right.Displacement_Init;
 
-	Wheel_Left.Wheel_Speed_Feedback  = -Motor.Chassis_DriverMotor1.Speed_RPM * Chassis_RPM_to_m_s;
-	Wheel_Right.Wheel_Speed_Feedback =  Motor.Chassis_DriverMotor2.Speed_RPM * Chassis_RPM_to_m_s;
+	WheelLeg_LQR_Struct.Wheel_Displacement_Feedback = (Wheel_Left.Displacement+Wheel_Right.Displacement)*0.5f;
+
+	Wheel_Left.Wheel_Speed_Feedback  = -Motor.Wheel_Motor1.Speed_RPM * Chassis_RPM_to_m_s;
+	Wheel_Right.Wheel_Speed_Feedback =  Motor.Wheel_Motor2.Speed_RPM * Chassis_RPM_to_m_s;
 
 /*===| 卡尔曼滤波得到底盘实际位移和速度 |===*/
-		xvEstimateKF_Update(&L_vaEstimateKF,-Chassis_Control_Struct.Acceleration_Y,Wheel_Left.Wheel_Speed_Feedback);//得到卡尔曼滤波后左轮的速度
-		xvEstimateKF_Update(&R_vaEstimateKF,-Chassis_Control_Struct.Acceleration_Y,Wheel_Right.Wheel_Speed_Feedback);//得到卡尔曼滤波后右轮的速度
+		xvEstimateKF_Update(&L_vaEstimateKF,Chassis_Control_Struct->Chassis_Control.Acceleration_Y,Wheel_Left.Wheel_Speed_Feedback);//得到卡尔曼滤波后左轮的速度
+		xvEstimateKF_Update(&R_vaEstimateKF,Chassis_Control_Struct->Chassis_Control.Acceleration_Y,Wheel_Right.Wheel_Speed_Feedback);//得到卡尔曼滤波后右轮的速度
 		WheelLeg_LQR_Struct.Wheel_Speed_Feedback = (L_vaEstimateKF.FilteredValue[0]+R_vaEstimateKF.FilteredValue[0])*0.5;
-
+		Chassis_Control_Struct->Chassis_Control.Chassis_Speed_Feedback = WheelLeg_LQR_Struct.Wheel_Speed_Feedback;
+		
 /*===|根据底盘状态更新底盘Init位移|===*/
     //非使能状态下更新
     if(Chassis_Control_Struct->Chassis_Control.Chassis_State != Chassis_FOLLOW
@@ -170,13 +173,13 @@ static void WheelLeg_LQR_add_six_state(Chassis_Control_StructTypedef *Chassis_Co
 	WheelLeg_LQR_Struct.State[7] = -(Chassis_Control->Leg_Right.Angle_Feedback)*Angle2Radain    - (Chassis_Control->Chassis_Control.Pitch-2.5*Angle2Radain);//θ  右腿后摆 θ  为正 增大
     WheelLeg_LQR_Struct.State[8] = -(Chassis_Control->Leg_Right.Total_Angle_Speed)*Angle2Radain - Chassis_Control->Chassis_Control.Pitch_dot;               //θ’ 右腿后摆 θ’ 为正 增大
 
-    WheelLeg_LQR_Struct.State[3] = (WheelLeg_LQR_Struct.Wheel_Displacement_Feedback-WheelLeg_LQR_Struct.Chassis_Control.Wheel_Displacement_Target);		//位移							
+    WheelLeg_LQR_Struct.State[3] = (WheelLeg_LQR_Struct.Wheel_Displacement_Feedback-WheelLeg_LQR_Struct.Wheel_Displacement_Target);		//位移							
     WheelLeg_LQR_Struct.State[4] = (WheelLeg_LQR_Struct.Wheel_Speed_Feedback-WheelLeg_LQR_Struct.Wheel_Speed_Target);	//位移一阶导	 
     WheelLeg_LQR_Struct.State[5] = Chassis_Control->Chassis_Control.Pitch-2.5*Angle2Radain;	//机体pitch,翘头pitch增大
     WheelLeg_LQR_Struct.State[6] = Chassis_Control->Chassis_Control.Pitch_dot;				//机体pitch弧度一阶导
 }
 
-static float LQR_K_calc(float *coe,float len)
+static float LQR_K_calc(const float *coe,const float len)
 {
   float K = coe[0]*len*len*len + coe[1]*len*len + coe[2]*len + coe[3];
 	
@@ -235,7 +238,7 @@ static void WheelLeg_LQR_calculation(Chassis_Leg_StructTypedef *Leg_Date, const 
 		phi   = -WheelLeg_LQR_Struct.State[5];
 		phi_d = -WheelLeg_LQR_Struct.State[6];
 	}
-	else if(Leg_Date->Leg_RL_State == Leg_R)
+	else if(Leg_Date->Leg_LR == Leg_R)
 	{
 		LQR_K_LR = WheelLeg_LQR_Struct.LQR_K_Right;
 		theta   = WheelLeg_LQR_Struct.State[7];
@@ -249,7 +252,7 @@ static void WheelLeg_LQR_calculation(Chassis_Leg_StructTypedef *Leg_Date, const 
 //	Chassis_Control_Struct.Torque_Joint_left=-Chassis_Control_Struct.Left_leg_Angle_PID.Output;
 	
     float Torque_wheel_left = -( LQR_K_LR[0] * theta + LQR_K_LR[1] * theta_d + LQR_K_LR[2] * xb + LQR_K_LR[3] * xb_d + LQR_K_LR[4] * phi + LQR_K_LR[5] * phi_d );
-    Leg_Date->LQR_Link_Torque_Target[1] =  ( LQR_K_LR[6] * theta + LQR_K_LR[7] * theta_d + LQR_K_LR[8] * xb + LQR_K_LR[9] * xb_d + LQR_K_LR[10] * phi + LQR_K_LR[11] * phi_d ) + (Chassis_Control_Struct.Chassis_Control.Leg_Splits_PID.Output);
+    Leg_Date->LQR_Link_Torque_Target[1] =  ( LQR_K_LR[6] * theta + LQR_K_LR[7] * theta_d + LQR_K_LR[8] * xb + LQR_K_LR[9] * xb_d + LQR_K_LR[10] * phi + LQR_K_LR[11] * phi_d ) + (WheelLeg_LQR_Struct.Leg_Splits_PID.Output);
 
 	if(Chsssis_State == Chassis_Jump)
 	{
@@ -262,7 +265,7 @@ static void WheelLeg_LQR_calculation(Chassis_Leg_StructTypedef *Leg_Date, const 
 	}
 	else
 	{
-		Leg_Date->LQR_Wheel_Torque_Target = Torque_wheel_left + WheelLeg_LQR_Struct.Wheel_Wz_Speed_PID;
+		Leg_Date->LQR_Wheel_Torque_Target = Torque_wheel_left + WheelLeg_LQR_Struct.Wheel_Wz_Speed_PID.Output;
 	}
 
 	Limit_float(&Leg_Date->LQR_Link_Torque_Target[1],80.0f,-80.0f);

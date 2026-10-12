@@ -2,6 +2,7 @@
 #define _WHEELLEG_KINEMATICS_H_
 
 #include "main.h"
+#include "Chassis.h"
 
 /*===| 虚拟腿运动学数据 |===*/
 typedef struct
@@ -24,6 +25,7 @@ typedef struct
     WheelLeg_LegKinematics_StructTypedef Right;
 } WheelLeg_Kinematics_StructTypedef;
 
-void WheelLeg_Kinematics_Update(Chassis_Control_StructTypedef *Chassis_Control_Struct,const float dt)
+void WheelLeg_Kinematics_Init(void);
+void WheelLeg_Kinematics_Update(Chassis_Control_StructTypedef *Chassis_Control_Struct);
 
 #endif 

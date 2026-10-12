@@ -2,6 +2,7 @@
 #define __WHEELLEG_LQR_H__
 
 #include "main.h"
+#include "Chassis.h"
 
 typedef struct
 {
@@ -57,5 +58,5 @@ typedef struct
 void WheelLeg_LQR_Init(void);
 
 void WheelLeg_LQR_Output(Chassis_Control_StructTypedef *Chassis_Control);
-
+void State_Filter(Chassis_Control_StructTypedef *Chassis_Control_Struct, float INS_MotionAccel_n_Z);
 #endif

@@ -62,6 +62,7 @@ extern "C" {
 #include "crc8_crc16.h"
 #include "Motor_Driver.h"
 #include "flash.h"
+#include "Vofa.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

@@ -28,21 +28,15 @@ PID_Struct_TypeDef RoboWz_PID_Struct;
 uint16_t Board_Commnuicate_Error_Ticker;
 uint8_t IF_Chassis_Online;
 
-extern float Steer_Total_angle_Target;
-extern float Steer_Total_angle_Feedback;
-
 
 void Robo_Task(void *argument)
 {
-	/*===| Yaw参数初始化 |===*/
-    RoboControl_Struct.Robo_Target_Gimbal_Yaw = 0;
-    
-    /*===| Pitch参数初始化 |===*/
-    RoboControl_Struct.Robo_Target_Gimbal_Pitch = 0;
-    
+	DWT_GetDeltaT(&RoboControl_Struct.DWT_Count);
+	osDelay(1);
+
     /*===| Wz_PID初始化 |===*/
 	RoboControl_Struct.Target_Direction = 0.0f;
-	PID_Init(&RoboWz_PID_Struct,RoboWz_PID_Kp,RoboWz_PID_Ki,RoboWz_PID_Kd,0.0f,RoboWz_PID_I_Output_MAX,RoboWz_PID_Output_MAX);
+	PID_Init(&RoboWz_PID_Struct,0.15f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
 	
     /*===| 默认模块状态 |===*/
     RoboControl_Struct.Chassis_State = Chassis_OFF;
@@ -53,6 +47,7 @@ void Robo_Task(void *argument)
     Referee_Data_Init();
     for(;;)
     {
+		RoboControl_Struct.Dt = DWT_GetDeltaT(&RoboControl_Struct.DWT_Count);
         /*===| 如果遥控器连接 |===*/
         if(Remote_Control_Struct.If_Remote_Connect)
         {
@@ -97,15 +92,9 @@ void Robo_Task(void *argument)
                 Remote_Control_Struct.If_Remote_Data_New = 0; 
                 Remote_Control_Last_Struct.If_Remote_Data_New =0;
             }
-        }   
-        if(RoboControl_Struct.Robo_Enable == 0&&Remote_Control_Struct.S2==SW_Down)
-		{
-			Chassis_Control_Struct.Smooth_restand_Flag = 1;
-		}
+        }
         /*===| 控制参数限幅 |===*/              
-		Limit_float(&RoboControl_Struct.Robo_Target_Gimbal_Pitch, 27, -20);
 		Limit_float(&RoboControl_Struct.Leg_Length,0.38f,0.15f);
-		Limit_float(&RoboControl_Struct.Leg_Angle ,70.0f,-70.0f);
 				
         /*===| 根据底盘运动状态得到Wz |===*/  
 		Get_Chassis_Wz();		
@@ -154,21 +143,14 @@ void Get_Chassis_Wz(void)
     {
         RoboControl_Struct.Robo_Target_Wz = 0;
     }
-    /*===| 底盘静止 WASD控制底盘转向朝向 |===*/
-    else if(RoboControl_Struct.Chassis_State == Chassis_STATIC)
+    /*===| 底盘跟随 WASD控制底盘转向朝向 |===*/
+    else if(RoboControl_Struct.Chassis_State == Chassis_FOLLOW)
     {
-		PID_Position_Calculate(&RoboWz_PID_Struct, -RoboControl_Struct.Target_Direction, RoboControl_Struct.Target_Direction_Err);
+        RoboControl_Struct.Target_Direction_Err = RoboControl_Struct.Yaw_Err;
+		PID_Position_Calculate(&RoboWz_PID_Struct, RoboControl_Struct.Target_Direction, RoboControl_Struct.Target_Direction_Err);
         RoboControl_Struct.Robo_Target_Wz = RoboWz_PID_Struct.Output;
 
 //		RoboControl_Struct.Robo_Target_Wz = 0;
-    }
-    /*===| 底盘跟随模式 |===*/
-    else if(RoboControl_Struct.Chassis_State == Chassis_FOLLOW)
-    {
-        PID_Position_Calculate(&RoboWz_PID_Struct, RoboControl_Struct.Target_Direction, RoboControl_Struct.Target_Direction_Err);
-        RoboControl_Struct.Robo_Target_Wz = RoboWz_PID_Struct.Output;
-		INS_Data_Self.Yaw_Round = 0;
-		Steer_Total_angle_Target = 0;
     }
     /*===| 底盘小陀螺 |===*/
     else if(RoboControl_Struct.Chassis_State == Chassis_SPIN)
@@ -214,14 +196,10 @@ void Control_Filter(void)
     RoboControl_Struct.Robo_Target_Vx    = 0.4f * RoboControl_Struct.Robo_Target_Vx    + (1 - 0.4f)  * RoboControl_Struct.Robo_Target_Vx_Last   ;
     RoboControl_Struct.Robo_Target_Vy    = 0.4f * RoboControl_Struct.Robo_Target_Vy    + (1 - 0.4f)  * RoboControl_Struct.Robo_Target_Vy_Last   ;
     RoboControl_Struct.Robo_Target_Wz    = 0.9f * RoboControl_Struct.Robo_Target_Wz    + (1 - 0.9f)  * RoboControl_Struct.Robo_Target_Wz_Last   ;
-    RoboControl_Struct.Robo_Target_Gimbal_Yaw   = 0.8f * RoboControl_Struct.Robo_Target_Gimbal_Yaw   + (1 - 0.8f)  * RoboControl_Struct.Robo_Target_Gimbal_Yaw_Last  ;
-    RoboControl_Struct.Robo_Target_Gimbal_Pitch = 0.8f * RoboControl_Struct.Robo_Target_Gimbal_Pitch + (1 - 0.8f)  * RoboControl_Struct.Robo_Target_Gimbal_Pitch_Last;
 
     RoboControl_Struct.Robo_Target_Vx_Last    =  RoboControl_Struct.Robo_Target_Vx   ;
     RoboControl_Struct.Robo_Target_Vy_Last    =  RoboControl_Struct.Robo_Target_Vy   ;              
-    RoboControl_Struct.Robo_Target_Wz_Last    =  RoboControl_Struct.Robo_Target_Wz   ;              
-    RoboControl_Struct.Robo_Target_Gimbal_Yaw_Last   =  RoboControl_Struct.Robo_Target_Gimbal_Yaw  ;              
-    RoboControl_Struct.Robo_Target_Gimbal_Pitch_Last =  RoboControl_Struct.Robo_Target_Gimbal_Pitch; 
+    RoboControl_Struct.Robo_Target_Wz_Last    =  RoboControl_Struct.Robo_Target_Wz   ;
 }
 
 /**
@@ -230,9 +208,6 @@ void Control_Filter(void)
 void RemoteControl_Float(void)
 {
    /*===| 底盘和云台运动控制 |===*/
-   static uint32_t Remote_DWT_Count;
-   float Dt = DWT_GetDeltaT(&Remote_DWT_Count);
-    
    if(Remote_Control_Struct.S1 != SW_Down)
    {
 		/*===| 底盘运动控制 |===*/
@@ -254,11 +229,9 @@ void RemoteControl_Float(void)
 				RoboControl_Struct.Robo_Target_Vy = 2.30f * (Remote_Control_Struct.RC_Left_Y);
 				break;
 		}
-  
-	    RoboControl_Struct.Robo_Target_Wz = RoboControl_Struct.Robo_Target_Wz;
 	   
 	   /*===| 底盘静止状态下 以云台为正方向 左摇杆直接控制底盘全向移动 先转向再前进 与云台控制解耦 |===*/
-	   if(RoboControl_Struct.Chassis_State == Chassis_STATIC || RoboControl_Struct.Chassis_State == Chassis_SPIN)
+	   if(RoboControl_Struct.Chassis_State == Chassis_FOLLOW || RoboControl_Struct.Chassis_State == Chassis_SPIN)
 	   {
 		   switch(RoboControl_Struct.Chassis_Speed_Level)
 			{
@@ -286,8 +259,6 @@ void RemoteControl_Float(void)
 
 void RemoteControl_Bool(void)
 {
-	static uint32_t Remote_DWT_Count;
-    float Dt = DWT_GetDeltaT(&Remote_DWT_Count);
 	
 		// /*===| 滑键滑至C模式关闭所有设备 |===*/     
         // if(Remote.Mode == Remote_Mode_C && RoboControl_Struct.Robo_Enable == 1) Robo_Stop();
@@ -297,8 +268,7 @@ void RemoteControl_Bool(void)
 		
 		if((RoboControl_Struct.Robo_Enable == 1) && Remote_Control_Struct.RC_Side > 0.7f)
 		{
-			RoboControl_Struct.Leg_Length += 0.16f * Remote_Control_Struct.RC_Right_Y * Dt;//控制腿长
-			RoboControl_Struct.Leg_Angle  += 10.0f * Remote_Control_Struct.RC_Right_X * Dt;//板凳状态下控制摆角
+			RoboControl_Struct.Leg_Length += 0.16f * Remote_Control_Struct.RC_Right_Y * RoboControl_Struct.Dt;//控制腿长
 			 
 			/*===| 自定义功能-左摇杆向右 |===*/
             if(Remote_Control_Struct.RC_Left_X > 0.8f && Remote_Control_Last_Struct.RC_Left_X < 0.8f)
@@ -328,8 +298,8 @@ void RemoteControl_Bool(void)
 				/*===| 速度等级+1 |===*/
                 RoboControl_Struct.Chassis_Speed_Level += 1;
                 if(RoboControl_Struct.Chassis_Speed_Level > 5) RoboControl_Struct.Chassis_Speed_Level = 5;
-				Chassis_Control_Struct.Jump_Level += 1;
-				if(Chassis_Control_Struct.Jump_Level > 3) Chassis_Control_Struct.Jump_Level = 3;
+				RoboControl_Struct.Jump_Level += 1;
+				if(RoboControl_Struct.Jump_Level > 3) RoboControl_Struct.Jump_Level = 3;
             }
             /*===| 自定义功能- 右摇杆向左 |===*/
             else if (Remote_Control_Struct.RC_Right_X < -0.8f && Remote_Control_Last_Struct.RC_Right_X > -0.8f)
@@ -337,8 +307,8 @@ void RemoteControl_Bool(void)
 				/*===| 速度等级-1 |===*/
                 RoboControl_Struct.Chassis_Speed_Level -= 1;
                 if(RoboControl_Struct.Chassis_Speed_Level < 1) RoboControl_Struct.Chassis_Speed_Level = 1;
-				Chassis_Control_Struct.Jump_Level -= 1;
-				if(Chassis_Control_Struct.Jump_Level < 1) Chassis_Control_Struct.Jump_Level = 1;
+				RoboControl_Struct.Jump_Level -= 1;
+				if(RoboControl_Struct.Jump_Level < 1) RoboControl_Struct.Jump_Level = 1;
             }
             /*===| 自定义功能-右摇杆向上 |===*/
             if      (Remote_Control_Struct.RC_Right_Y > 0.8f && Remote_Control_Last_Struct.RC_Right_Y < 0.8f)
@@ -410,7 +380,6 @@ void RemoteControl_Bool(void)
 			if(RoboControl_Struct.Chassis_State != Chassis_SPIN)
 			{
 				INS_Data_Self.Yaw_Round = 0;
-				Steer_Total_angle_Target = 0;
 			}
 			RoboControl_Struct.Chassis_State = Chassis_SPIN;
 		}
@@ -418,26 +387,12 @@ void RemoteControl_Bool(void)
 		{
 			if(RoboControl_Struct.Chassis_State == Chassis_SPIN)
 			{
-				RoboControl_Struct.Chassis_State = Chassis_STATIC;
-				/*===| 每次关闭小陀螺反向 |===*/
-				if (fabsf(RoboControl_Struct.Yaw_Err)<90.0f)
-				{
-					Chassis_Control_Struct.Chassis_Forward_Change_Flag = 0;
-				}
-				else
-				{
-					Chassis_Control_Struct.Chassis_Forward_Change_Flag = 1;
-				}
+				RoboControl_Struct.Chassis_State = Chassis_FOLLOW;
 				RoboControl_Struct.SPIN_Direction_Flag = !RoboControl_Struct.SPIN_Direction_Flag;
 				INS_Data_Self.Yaw_Round = 0;
-				Steer_Total_angle_Target = 0;
 			}
 			
 		}
-//		if(RoboControl_Struct.Robo_Enable == 0&&Remote_Control_Struct.S2==SW_Down)
-//		{
-//			Chassis_Control_Struct.Smooth_restand_Flag = 1;
-//		}
 } 
 
 
@@ -691,30 +646,14 @@ void Robo_Stop(void)
     RoboControl_Struct.Robo_Enable = 0;
 
 	RoboControl_Struct.Chassis_State  = Chassis_OFF;
-	RoboControl_Struct.Shoot_State    = Shoot_State_Off;
-    RoboControl_Struct.Robo_Target_Vx = 0;
-    RoboControl_Struct.Robo_Target_Vy = 0;
-    RoboControl_Struct.Robo_Target_Wz = 0;
+    RoboControl_Struct.Robo_Target_Vx = 0.0f;
+    RoboControl_Struct.Robo_Target_Vy = 0.0f;
+    RoboControl_Struct.Robo_Target_Wz = 0.0f;
+
     RoboControl_Struct.SuperCap_State = 0;
-    
-	//清零功能标志位 避免疯车
-	Chassis_Control_Struct.Recover_from_ground_Flag = 0;
-	Chassis_Control_Struct.Recover_State    = 0;
-	Chassis_Control_Struct.Jump_Flag        = 0;
-	Chassis_Control_Struct.Jump_State       = 0;
-	Chassis_Control_Struct.UpStep_Dect_Flag = 0;
-	Chassis_Control_Struct.UpStep_Flag   	= 0;
-	Chassis_Control_Struct.UpStep_State  	= 0;
+    RoboControl_Struct.Power_Limit_Flag = 0;
+    RoboControl_Struct.Slow_RESET_Flag = 0;
 	
-	Chassis_Control_Struct.Leg_length_Level = 1;
-	Chassis_Control_Struct.Jump_Level = 1;
-	
-//	Chassis_Control_Struct.Smooth_restand_Flag = 0;
-	Chassis_Control_Struct.Allow_to_Stand_Flag = 0;
-	
-    vTaskSuspendAll();
-	
-    xTaskResumeAll(); 
 }
 
 
@@ -723,44 +662,26 @@ void Robo_Stop(void)
  */
 void Robo_Restart(void)
 {
-    vTaskSuspendAll();
 
 	RoboControl_Struct.Robo_Enable = 1;
-	if(Chassis_Control_Struct.Smooth_restand_Flag == 1)
+
+	//0:LQR自起，1:PID倒地缓自起
+	if(Remote_Control_Struct.S2 == SW_Down)
 	{
-		Chassis_Control_Struct.Recover_from_ground_Flag = 0;
+		RoboControl_Struct.Chassis_Control_Flag.Chassis_RESET_Slow_FLag = 1;
 	}
 	else
 	{
-		Chassis_Control_Struct.Recover_from_ground_Flag = 1;
+		RoboControl_Struct.Chassis_Control_Flag.Chassis_RESET_Slow_FLag = 0;
 	}
-	
 	/*===| 默认模块状态 |===*/
-	RoboControl_Struct.Chassis_State  = Chassis_STATIC;
+	RoboControl_Struct.Chassis_State  = Chassis_Recover;
     RoboControl_Struct.SuperCap_State = 0;
 	
-	RoboControl_Struct.Leg_Length = 0.15f;
-	Chassis_Control_Struct.Leg_length_Level = 1;
-	Chassis_Control_Struct.Jump_Level = 1;
-	if(fabsf(RoboControl_Struct.Yaw_Err)<90.0f)
-	{
-		Chassis_Control_Struct.Chassis_Forward_Change_Flag = 0;
-	}
-	else
-	{
-		Chassis_Control_Struct.Chassis_Forward_Change_Flag = 1;
-	}
+	RoboControl_Struct.Leg_Length = Leg_Length_Min;
+	RoboControl_Struct.Jump_Level = 1;
 
 	INS_Data_Self.Yaw_Round  = 0;
-	Steer_Total_angle_Target = 0;
-		
-    Chassis_Control_Struct.Target_displacement = Chassis_Control_Struct.displacement;
-    Chassis_Control_Struct.add_displacement    = 0.0f;
-    Chassis_Control_Struct.now_displacement    = Chassis_Control_Struct.displacement;
-    Chassis_Control_Struct.Chassis_Vy_Target_last = 0.0f; 
-	
-//	Chassis_Control_Struct.Smooth_restand_Flag = 1;//使能缓起立功能执行标志位
 
-    xTaskResumeAll();
 }
 

@@ -55,5 +55,5 @@ void VOFA_JustFloat_Send(UART_HandleTypeDef *huart)
     uint8_t tail[4] = {0x00, 0x00, 0x80, 0x7f};
     memcpy(&VOFA_JustFloat_Buffer[VOFA_JustFloat_Buffer_End + 1], tail, 4);
     
-    HAL_UART_Transmit(huart, VOFA_JustFloat_Buffer, 4*(VOFA_JustFloat_Buffer_End + 2), 10);
+    HAL_UART_Transmit(huart, (uint8_t *)VOFA_JustFloat_Buffer, 4*(VOFA_JustFloat_Buffer_End + 2), 10);
 }

@@ -36,7 +36,7 @@ double c;
  
 // Power_Limit(&Chassis_Control_Struct, &Motor_Data_Struct, Chassis_Control_Struct.Power_MAX, TP_wl_wr_jl_jr);
 
-void Power_Limit(Chassis_Control_StructTypeDef *Chassis_Struct,Motor_Data_StructTypeDef *Motor_Data,float P_max,float *Torque_Wheel)
+void Power_Limit(Chassis_Control_StructTypedef *Chassis_Struct,Motor_Data_StructTypeDef *Motor_Data,float P_max,float *Torque_Wheel)
 {
 	/*===| 根据目标力矩和当前转速预测下一时刻的功率 |===*/
 	Motor_Power_Pre[0] = Power_Predict_Calculate(&Motor_Data[5],Torque_Wheel[4]);
@@ -116,7 +116,7 @@ void Torque_Inverse_Solution(float *Inverse_Torque,float P_max_Single,Motor_Data
 /**
  * @brief 力矩决策
  */
-void Torque_decision(Chassis_Control_StructTypeDef *Chassis_Struct,uint8_t i,float *Torque_Wheel)
+void Torque_decision(Chassis_Control_StructTypedef *Chassis_Struct,uint8_t i,float *Torque_Wheel)
 {
 	if(Torque_Wheel[i+4] > 0)
 	{

@@ -32,7 +32,7 @@ typedef struct
  * @note 关节电机对应关系:Joint1(左腿车头)、Joint2(左腿车尾)、Joint3(右腿车头)、Joint4(右腿车尾)
  * 
  */
-typedef __PACKED_STRUCT
+typedef struct
 {
     Motor_Data_StructTypeDef Wheel_Motor1;  //左腿轮电机
     Motor_Data_StructTypeDef Wheel_Motor2;  //右腿轮电机

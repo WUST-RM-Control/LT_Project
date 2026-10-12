@@ -92,9 +92,9 @@
   ..\Project\Algorithm_Drivers\Function.h ..\Project\BSP\DWT.h \
   ..\Project\BSP\Buzzer.h ..\Project\Algorithm_Drivers\crc8_crc16.h \
   ..\Project\Hardware_Drivers\Motor_Driver.h ..\Project\BSP\flash.h \
-  ..\USB_Device\App\usbd_cdc_if.h \
+  ..\Project\Algorithm_Drivers\Vofa.h ..\USB_Device\App\usbd_cdc_if.h \
   ..\Middlewares\ST\STM32_USB_Device_Library\Class\CDC\Inc\usbd_cdc.h \
   ..\Middlewares\ST\STM32_USB_Device_Library\Core\Inc\usbd_ioreq.h \
   ..\Middlewares\ST\STM32_USB_Device_Library\Core\Inc\usbd_core.h \
   ..\Middlewares\ST\STM32_USB_Device_Library\Core\Inc\usbd_ctlreq.h \
-  ..\Project\Algorithm_Drivers\Vofa.h ..\Project\Robot_Application\Aim.h
+  ..\Project\Robot_Application\Aim.h

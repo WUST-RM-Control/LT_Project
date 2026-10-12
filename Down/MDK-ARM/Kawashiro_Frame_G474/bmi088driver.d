@@ -91,5 +91,5 @@
   ..\Project\Algorithm_Drivers\Function.h ..\Project\BSP\DWT.h \
   ..\Project\BSP\Buzzer.h ..\Project\Algorithm_Drivers\crc8_crc16.h \
   ..\Project\Hardware_Drivers\Motor_Driver.h ..\Project\BSP\flash.h \
-  ..\Project\BSP\BMI088driver.h ..\Project\BSP\BMI088reg.h \
-  ..\Project\BSP\BMI088Middleware.h
+  ..\Project\Algorithm_Drivers\Vofa.h ..\Project\BSP\BMI088driver.h \
+  ..\Project\BSP\BMI088reg.h ..\Project\BSP\BMI088Middleware.h
