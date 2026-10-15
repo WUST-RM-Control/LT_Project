@@ -1,6 +1,6 @@
 #include "WheelLeg_Chassis.h"
 
-//
+//Chassis_Smooth_Restand翻倒自起函数相关宏定义
 #define Chassis_Recover_Angle_Speed 			125.0f		//翻倒回正摆角速度
 #define Chassis_RESET_Slow_Frist_Angle_Speed 	125.0f		//缓倒地自起只动摆角时速度
 //保持比例180:1(收腿的前中段恰好不碰地，后段碰地)
@@ -41,10 +41,6 @@
  *  @param Chassis_Control->Leg_Right.Total_Angle_Target [out] 右腿总角度目标(°)
  *  @param Chassis_Control->Chassis_Control.Leg_Length_Target    [out] 目标腿长(m)
  * 
- * 待完善：
- * 摆角堵转保护
- * 改摆腿逻辑:收腿时腿部从自然位置起来(L:62 70 76 R:64 72 -77   低头，正置，抬头)
- * 改收腿逻辑:机体不会因为摆腿角动量守恒和腿长蹬地导致摇摇晃晃起来
  *=========================================================================================*/
 int8_t Chassis_Smooth_Restand(Chassis_Control_StructTypedef *Chassis_Control)
 {
@@ -59,7 +55,9 @@ int8_t Chassis_Smooth_Restand(Chassis_Control_StructTypedef *Chassis_Control)
 
 	//用于翻倒回正，左腿摆向，逆时针:1，顺时针:-1
 	//翻倒回正:腿摆角方向相同，前翻(Pitch<0车头触地)，左腿逆时针转
-	static int8_t Angle_Speed = 0;
+	static int8_t Angle_Speed = 0;	
+	//检测翻倒回正腿摆角堵转计数器，单位:s
+	static float Chassis_Recover_Angle_Stop_Error_Tim = 0.0f;
 
 	//记录目标最终摆角值用
 	static Chassis_State_EnumTypedef Last_State = Chassis_OFF;
@@ -164,6 +162,19 @@ int8_t Chassis_Smooth_Restand(Chassis_Control_StructTypedef *Chassis_Control)
 			Chassis_Control->Leg_Left.Total_Angle_Target += (Chassis_Recover_Angle_Speed * Angle_Speed + CenterSpeed_Target)*Chassis_Control->Chassis_Dt;
 			if(fabsf(R_Angle_Err)< 50.0f)
 			Chassis_Control->Leg_Right.Total_Angle_Target +=(-Chassis_Recover_Angle_Speed * Angle_Speed + CenterSpeed_Target)*Chassis_Control->Chassis_Dt;
+			if((fabsf(L_Angle_Err)< 40.0f)&&fabsf(R_Angle_Err)< 40.0f)
+			{
+				Chassis_Recover_Angle_Stop_Error_Tim = 0.0f;
+			}
+			else
+			{
+				Chassis_Recover_Angle_Stop_Error_Tim += Chassis_Control->Chassis_Dt;
+			}
+			if(Chassis_Recover_Angle_Stop_Error_Tim>1.0f)
+			{
+				Angle_Speed = -Angle_Speed;
+				Chassis_Recover_Angle_Stop_Error_Tim = 0.0f;
+			}
 		}
 	}
 	
