@@ -159,8 +159,17 @@ static void Leg_State_KF_Update(Chassis_Leg_StructTypedef *Leg_Date, PosVelKF_t 
 
 	Leg_Date->Length_Feedback       = kf_L0->x;
 	Leg_Date->Length_Speed          = kf_L0->v;
-	Leg_Date->Total_Angle_Feedback  = kf_A0->x;
-	Leg_Date->Total_Angle_Speed     = kf_A0->v;
+	// Leg_Date->Total_Angle_Feedback  = kf_A0->x;
+	// Leg_Date->Total_Angle_Speed     = kf_A0->v;
+    // if(Leg_Date->Leg_LR == Leg_R)
+    // {
+    //     VOFA_JustFloat_AddValue(0,Leg_Date->Total_Angle_Feedback);
+    //     VOFA_JustFloat_AddValue(1,Leg_Date->Total_Angle_Speed);
+    //     VOFA_JustFloat_AddValue(2,kf_A0->x);
+    //     VOFA_JustFloat_AddValue(3,kf_A0->v);
+
+    // }
+
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -175,7 +184,7 @@ static void Leg_State_KF_Update(Chassis_Leg_StructTypedef *Leg_Date, PosVelKF_t 
  * @param Joint_Angle_14 左腿：关节1(左腿车头)角度；右腿：关节4(右腿车尾)角度
  * @param Joint_Angle_23 左腿：关节2(左腿车尾)角度；右腿：关节3(右腿车头)角度
  */
-static void WheelLeg_ForwardKinematics(WheelLeg_LegKinematics_StructTypedef *Leg_Date, float Jt[2][2], const float Joint_Angle_14,const float Joint_Angle_23)
+static void WheelLeg_ForwardKinematics(WheelLeg_LegKinematics_StructTypedef *Leg_Date, const float Joint_Angle_14,const float Joint_Angle_23)
 {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	//哈工程正运动学解算
@@ -264,10 +273,10 @@ static void WheelLeg_ForwardKinematics(WheelLeg_LegKinematics_StructTypedef *Leg
 	// J[1][0]=-(L1*arm_sin_f32(PHI1-PHI2)*arm_cos_f32(PHI3)) / (arm_sin_f32(PHI2-PHI3));
 	// J[1][1]=-(L1*arm_sin_f32(PHI3-PHI4)*arm_cos_f32(PHI2)) / (arm_sin_f32(PHI2-PHI3));
 	/*===| 计算矩阵Jᵀ*R*M |===*/
-	Jt[0][0]=(L1*arm_sin_f32(PHI0-PHI3)*arm_sin_f32(PHI1-PHI2)) / (arm_sin_f32(PHI3-PHI2));
-	Jt[0][1]=(L1*arm_cos_f32(PHI0-PHI3)*arm_sin_f32(PHI1-PHI2)) / (L0*arm_sin_f32(PHI3-PHI2));
-	Jt[1][0]=(L1*arm_sin_f32(PHI0-PHI2)*arm_sin_f32(PHI3-PHI4)) / (arm_sin_f32(PHI3-PHI2));
-	Jt[1][1]=(L1*arm_cos_f32(PHI0-PHI2)*arm_sin_f32(PHI3-PHI4)) / (L0*arm_sin_f32(PHI3-PHI2));
+	Leg_Date->Jt[0][0]=(L1*arm_sin_f32(PHI0-PHI3)*arm_sin_f32(PHI1-PHI2)) / (arm_sin_f32(PHI3-PHI2));
+	Leg_Date->Jt[0][1]=(L1*arm_cos_f32(PHI0-PHI3)*arm_sin_f32(PHI1-PHI2)) / (L0*arm_sin_f32(PHI3-PHI2));
+	Leg_Date->Jt[1][0]=(L1*arm_sin_f32(PHI0-PHI2)*arm_sin_f32(PHI3-PHI4)) / (arm_sin_f32(PHI3-PHI2));
+	Leg_Date->Jt[1][1]=(L1*arm_cos_f32(PHI0-PHI2)*arm_sin_f32(PHI3-PHI4)) / (L0*arm_sin_f32(PHI3-PHI2));
 	
 	// /*===| 速度映射部分 |===*/
 	// dxc_L=J[0][0]*d_phi1_L + J[0][1]*d_phi4_L;
@@ -280,7 +289,7 @@ static void WheelLeg_ForwardKinematics(WheelLeg_LegKinematics_StructTypedef *Leg
  * @param Chassis_Leg_Date 
  * @param LegKinematics_Leg_Date 
  */
-static void WheelLeg_Kinematics_Assign(Chassis_Leg_StructTypedef *Chassis_Leg_Date,WheelLeg_LegKinematics_StructTypedef LegKinematics_Leg_Date)
+static void WheelLeg_Kinematics_Assign(Chassis_Leg_StructTypedef *Chassis_Leg_Date,WheelLeg_LegKinematics_StructTypedef LegKinematics_Leg_Date, float Dt)
 {
     //Last数据赋值
 	Chassis_Leg_Date->Length_Last = Chassis_Leg_Date->Length_Feedback;
@@ -293,21 +302,26 @@ static void WheelLeg_Kinematics_Assign(Chassis_Leg_StructTypedef *Chassis_Leg_Da
     if      (Chassis_Leg_Date->Angle_Feedback -  Chassis_Leg_Date->Angle_Last >  180.0f)  Chassis_Leg_Date->Angle_Round--;
     else if (Chassis_Leg_Date->Angle_Feedback -  Chassis_Leg_Date->Angle_Last < -180.0f)  Chassis_Leg_Date->Angle_Round++;
     Chassis_Leg_Date->Total_Angle_Feedback = 360.0f * Chassis_Leg_Date->Angle_Round + Chassis_Leg_Date->Angle_Feedback;
+    //计算速度(腿长在滤波波中赋值)
+    Chassis_Leg_Date->Total_Angle_Speed = (Chassis_Leg_Date->Total_Angle_Feedback - Chassis_Leg_Date->Total_Angle_Last)/Dt;
+
+    //雅可比矩阵
+    Chassis_Leg_Date->Jt[0][0] = LegKinematics_Leg_Date.Jt[0][0];
+    Chassis_Leg_Date->Jt[0][1] = LegKinematics_Leg_Date.Jt[0][1];
+    Chassis_Leg_Date->Jt[1][0] = LegKinematics_Leg_Date.Jt[1][0];
+    Chassis_Leg_Date->Jt[1][1] = LegKinematics_Leg_Date.Jt[1][1];
 }
 
 //运动学数据更新
 void WheelLeg_Kinematics_Update(Chassis_Control_StructTypedef *Chassis_Control_Struct)
 {
     //运动学结束算
-    WheelLeg_ForwardKinematics(&wheelLeg_kinematics_Struct.Left,  Chassis_Control_Struct->Leg_Left.Jt,  Motor.Joint1.Angle, Motor.Joint2.Angle);
-    WheelLeg_ForwardKinematics(&wheelLeg_kinematics_Struct.Right, Chassis_Control_Struct->Leg_Right.Jt, Motor.Joint4.Angle, Motor.Joint3.Angle);
+    WheelLeg_ForwardKinematics(&wheelLeg_kinematics_Struct.Left,  Motor.Joint1.Angle, Motor.Joint2.Angle);
+    WheelLeg_ForwardKinematics(&wheelLeg_kinematics_Struct.Right,  Motor.Joint4.Angle, Motor.Joint3.Angle);
 
     //滤波前数据赋值
-    WheelLeg_Kinematics_Assign(&Chassis_Control_Struct->Leg_Left, wheelLeg_kinematics_Struct.Left);
-    WheelLeg_Kinematics_Assign(&Chassis_Control_Struct->Leg_Right,wheelLeg_kinematics_Struct.Right);
-
-	VOFA_JustFloat_AddValue(5,Chassis_Control_Struct->Leg_Left.Total_Angle_Feedback);
-	VOFA_JustFloat_AddValue(6,Chassis_Control_Struct->Leg_Right.Total_Angle_Feedback);
+    WheelLeg_Kinematics_Assign(&Chassis_Control_Struct->Leg_Left, wheelLeg_kinematics_Struct.Left, Chassis_Control_Struct->Chassis_Dt);
+    WheelLeg_Kinematics_Assign(&Chassis_Control_Struct->Leg_Right,wheelLeg_kinematics_Struct.Right, Chassis_Control_Struct->Chassis_Dt);
 
     //卡尔曼滤波
     //位置-速度卡尔曼滤波
@@ -317,9 +331,5 @@ void WheelLeg_Kinematics_Update(Chassis_Control_StructTypedef *Chassis_Control_S
 	//底盘状态数据计算
 	Chassis_Control_Struct->Chassis_Control.Leg_Length_Feebback = (Chassis_Control_Struct->Leg_Left.Length_Feedback + Chassis_Control_Struct->Leg_Right.Length_Feedback)*0.5;
 
-	VOFA_JustFloat_AddValue(1,Chassis_Control_Struct->Leg_Left.Total_Angle_Feedback);
-	VOFA_JustFloat_AddValue(2,Chassis_Control_Struct->Leg_Right.Total_Angle_Feedback);
-	VOFA_JustFloat_AddValue(3,Chassis_Control_Struct->Leg_Left.Total_Angle_Speed);
-	VOFA_JustFloat_AddValue(4,Chassis_Control_Struct->Leg_Right.Total_Angle_Speed);
 }
 

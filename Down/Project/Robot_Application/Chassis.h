@@ -61,6 +61,8 @@ typedef struct
     //倒地缓自起(PID自起)
     //0：非倒地自起状态或标志位赋值完成
 	//1：准备状态(标志位挂起)
+	//2：摆角90°
+	//3：收腿
     uint8_t Chassis_RESET_Slow_FLag;
     
     //跳跃
@@ -81,9 +83,12 @@ typedef struct
 	//INS
 		float Acceleration_Z;	//Z轴加速度(滤波后)
 		float Acceleration_Y;	//Y轴加速度:-INS.MotionAccel_n[1]
-		float Pitch;			//弧度,LQR使用的pitch,车头抬高pitch增大
-		float Pitch_dot;		//弧度
-		float Pitch_Last;		//弧度
+		float Roll;				//角度.左腿抬高增大
+		float Roll_dot;			//角度
+		float Roll_Last;		//角度
+		float Pitch;			//角度,LQR使用的pitch*Angle2Radain,车头抬高pitch增大
+		float Pitch_dot;		//角度
+		float Pitch_Last;		//角度
 		float Yaw_Speed;		//弧度/s，俯视逆时针为正方向，用于转向和小陀螺
 								//INS.Gyro[Z]角速度，rad/s
 	//Chassis
@@ -97,7 +102,7 @@ typedef struct
 	/*===| 底盘数据 |===*/
 	//Leg
 		float Leg_Length_Target;	//目标腿长(RoboControl_Struct赋值,用于记录)
-		float Leg_Length_Feebback;	//当前腿长(赋值,用于LQR计算)
+		float Leg_Length_Feebback;	//当前腿长(赋值,用于LQR计算和腿长PID位置环
 		float Chassis_Speed_Feedback;	//滤波后底盘速度
 } Chassis_Date_StructTypeDef;
 
@@ -118,7 +123,7 @@ typedef struct
 
 	//Leg数据(卡尔曼滤波后数据)
 		//腿长
-		float Length_Target;//一阶倒立摆腿长m
+		// float Length_Target;//一阶倒立摆腿长m
 		float Length_Feedback;//m
 		float Length_Last;//m
 		float Length_Speed;//m/s

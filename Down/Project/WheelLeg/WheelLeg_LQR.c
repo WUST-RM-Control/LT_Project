@@ -167,16 +167,18 @@ static void WheelLeg_LQR_Calculated_Displacement(Chassis_Control_StructTypedef *
  */
 static void WheelLeg_LQR_add_six_state(Chassis_Control_StructTypedef *Chassis_Control)
 {
-	WheelLeg_LQR_Struct.State[1] =  (Chassis_Control->Leg_Left.Angle_Feedback)*Angle2Radain    - (Chassis_Control->Chassis_Control.Pitch-2.5*Angle2Radain);//θ  左腿后摆 θ  为正 增大
-	WheelLeg_LQR_Struct.State[2] =  (Chassis_Control->Leg_Left.Total_Angle_Speed)*Angle2Radain - Chassis_Control->Chassis_Control.Pitch_dot;               //θ’ 左腿后摆 θ’ 为正 增大
+	WheelLeg_LQR_Struct.State[1] =  ( Chassis_Control->Leg_Left.Angle_Feedback    - (Chassis_Control->Chassis_Control.Pitch-2.5))*Angle2Radain;//θ  左腿后摆 θ  为正 增大
+	WheelLeg_LQR_Struct.State[2] =  ( Chassis_Control->Leg_Left.Total_Angle_Speed -  Chassis_Control->Chassis_Control.Pitch_dot)*Angle2Radain;               //θ’ 左腿后摆 θ’ 为正 增大
 	
-	WheelLeg_LQR_Struct.State[7] = -(Chassis_Control->Leg_Right.Angle_Feedback)*Angle2Radain    - (Chassis_Control->Chassis_Control.Pitch-2.5*Angle2Radain);//θ  右腿后摆 θ  为正 增大
-    WheelLeg_LQR_Struct.State[8] = -(Chassis_Control->Leg_Right.Total_Angle_Speed)*Angle2Radain - Chassis_Control->Chassis_Control.Pitch_dot;               //θ’ 右腿后摆 θ’ 为正 增大
+	WheelLeg_LQR_Struct.State[7] = (-Chassis_Control->Leg_Right.Angle_Feedback    - (Chassis_Control->Chassis_Control.Pitch-2.5))*Angle2Radain;//θ  右腿后摆 θ  为正 增大
+    WheelLeg_LQR_Struct.State[8] = (-Chassis_Control->Leg_Right.Total_Angle_Speed -  Chassis_Control->Chassis_Control.Pitch_dot)*Angle2Radain;               //θ’ 右腿后摆 θ’ 为正 增大
 
+	// VOFA_JustFloat_AddValue(8,Chassis_Control->Leg_Right.Total_Angle_Speed);
+	// VOFA_JustFloat_AddValue(9,Chassis_Control->Leg_Left.Total_Angle_Speed);
     WheelLeg_LQR_Struct.State[3] = (WheelLeg_LQR_Struct.Wheel_Displacement_Feedback-WheelLeg_LQR_Struct.Wheel_Displacement_Target);		//位移							
     WheelLeg_LQR_Struct.State[4] = (WheelLeg_LQR_Struct.Wheel_Speed_Feedback-WheelLeg_LQR_Struct.Wheel_Speed_Target);	//位移一阶导	 
-    WheelLeg_LQR_Struct.State[5] = Chassis_Control->Chassis_Control.Pitch-2.5*Angle2Radain;	//机体pitch,翘头pitch增大
-    WheelLeg_LQR_Struct.State[6] = Chassis_Control->Chassis_Control.Pitch_dot;				//机体pitch弧度一阶导
+    WheelLeg_LQR_Struct.State[5] = (Chassis_Control->Chassis_Control.Pitch-2.5)*Angle2Radain;	//机体pitch,翘头pitch增大
+    WheelLeg_LQR_Struct.State[6] = Chassis_Control->Chassis_Control.Pitch_dot*Angle2Radain;				//机体pitch弧度一阶导
 }
 
 static float LQR_K_calc(const float *coe,const float len)
@@ -192,12 +194,13 @@ static float LQR_K_calc(const float *coe,const float len)
  * @param Length_Left_Feedback 
  * @param Length_Right_Feedback 
  */
-static void calucateK(const float Length_Left_Feedback, const float Length_Right_Feedback)  
+// static void calucateK(const float Length_Left_Feedback, const float Length_Right_Feedback)  
+static void calucateK(const float Length_Feedback)  
 {
     for(int i = 0; i < 12; i++)
     {
-		WheelLeg_LQR_Struct.LQR_K_Left[i]  = LQR_K_calc(Poly_Coefficient[i], Length_Left_Feedback);
-        WheelLeg_LQR_Struct.LQR_K_Right[i] = LQR_K_calc(Poly_Coefficient[i], Length_Right_Feedback);
+		WheelLeg_LQR_Struct.LQR_K_Left[i]  = LQR_K_calc(Poly_Coefficient[i], Length_Feedback);
+        WheelLeg_LQR_Struct.LQR_K_Right[i] = LQR_K_calc(Poly_Coefficient[i], Length_Feedback);
     }
 }
 
@@ -267,6 +270,19 @@ static void WheelLeg_LQR_calculation(Chassis_Leg_StructTypedef *Leg_Date, const 
 	{
 		Leg_Date->LQR_Wheel_Torque_Target = Torque_wheel_left + WheelLeg_LQR_Struct.Wheel_Wz_Speed_PID.Output;
 	}
+	// //theta_d
+	// //R当前腿长好像有问题
+	// if(Leg_Date->Leg_LR == Leg_R)
+	// {
+	// 	VOFA_JustFloat_AddValue(0,Chsssis_State);
+	// 	VOFA_JustFloat_AddValue(1,Leg_Date->LQR_Link_Torque_Target[1]);
+	// 	VOFA_JustFloat_AddValue(2,LQR_K_LR[7] * theta_d);
+	// }
+	// if(Leg_Date->Leg_LR == Leg_L)
+	// {
+	// 	VOFA_JustFloat_AddValue(3,Leg_Date->LQR_Link_Torque_Target[1]);
+	// 	VOFA_JustFloat_AddValue(4,LQR_K_LR[7] * theta_d);
+	// }
 
 	Limit_float(&Leg_Date->LQR_Link_Torque_Target[1],80.0f,-80.0f);
 	Limit_float(&Leg_Date->LQR_Wheel_Torque_Target,5.0f,-5.0f);
@@ -276,12 +292,17 @@ void WheelLeg_LQR_Output(Chassis_Control_StructTypedef *Chassis_Control)
 {
 	WheelLeg_LQR_Calculated_Displacement(Chassis_Control);
 
-	WheelLeg_LQR_add_six_state(Chassis_Control);
+	if(Chassis_Control->Chassis_Control.Chassis_State == Chassis_FOLLOW
+	|| Chassis_Control->Chassis_Control.Chassis_State == Chassis_SPIN)
+	{
+		WheelLeg_LQR_add_six_state(Chassis_Control);
 
-	calucateK(Chassis_Control->Leg_Left.Length_Feedback, Chassis_Control->Leg_Right.Length_Feedback);
+		calucateK(Chassis_Control->Chassis_Control.Leg_Length_Feebback);
 
-	WheelLeg_LQR_PID_Patch(Chassis_Control);
+		WheelLeg_LQR_PID_Patch(Chassis_Control);
 
-	WheelLeg_LQR_calculation(&Chassis_Control->Leg_Left,  Chassis_Control->Chassis_Control.Chassis_State);
-	WheelLeg_LQR_calculation(&Chassis_Control->Leg_Right, Chassis_Control->Chassis_Control.Chassis_State);
+		WheelLeg_LQR_calculation(&Chassis_Control->Leg_Left,  Chassis_Control->Chassis_Control.Chassis_State);
+		WheelLeg_LQR_calculation(&Chassis_Control->Leg_Right, Chassis_Control->Chassis_Control.Chassis_State);
+	}
+		
 }

@@ -94,7 +94,7 @@ void Robo_Task(void *argument)
             }
         }
         /*===| 控制参数限幅 |===*/              
-		Limit_float(&RoboControl_Struct.Leg_Length,0.38f,0.15f);
+		Limit_float(&RoboControl_Struct.Leg_Length,Leg_Length_Max,Leg_Length_Min);
 				
         /*===| 根据底盘运动状态得到Wz |===*/  
 		Get_Chassis_Wz();		

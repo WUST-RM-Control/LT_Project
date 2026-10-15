@@ -81,7 +81,7 @@ typedef struct
 
 void WheelLeg_SpringComp_Init(void);
 
-void WheelLeg_SpringComp(Chassis_Leg_StructTypedef *Leg);
+void WheelLeg_SpringComp(Chassis_Leg_StructTypedef *Leg,float Error_Length);
 
 int8_t WheelLeg_SpringComp_Measure_Task
 (const uint8_t Leg_LR,

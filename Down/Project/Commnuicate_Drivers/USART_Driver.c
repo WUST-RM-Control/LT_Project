@@ -15,8 +15,28 @@
 uint8_t RS485_1_RX_Data[64]     = {0};
 uint8_t RS485_2_RX_Data[64]     = {0};
 uint8_t UART4_RX_Data[64]       = {0};
-uint8_t UART5_RX_Data[256]       = {0};
+uint8_t UART5_RX_Data[256]      = {0};
 uint8_t SBUS_RX_Data[64]        = {0};
+
+uint16_t Tof_Displacement = 0;//毫米
+float Tof_Displacement_M = 0.0f;//米
+//Tof测距解包
+void Tof_Date_Unpack(uint8_t *Date)
+{
+    char *p = strstr((char *)Date, "d:");
+    uint16_t dat_tmp = 0;//毫米
+    while (*p != 'm')
+    {
+        if (*p >= '0' && *p <= '9')
+        {
+            dat_tmp = dat_tmp * 10 + (*p - '0');
+        }
+        p++;
+    }
+    Tof_Displacement = dat_tmp;
+	Tof_Displacement_M = Tof_Displacement*0.001f;
+}
+
 
 /**
  * @brief USART接收空闲事件回调函数
@@ -36,7 +56,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
     else if(huart == &huart4)
 	{
 //        Laser_GetData_Call_Back(UART4_RX_Data);
-        
+        Tof_Date_Unpack(UART4_RX_Data);
 		HAL_UARTEx_ReceiveToIdle_DMA(&huart4, UART4_RX_Data, 64);
         __HAL_DMA_DISABLE_IT(UART4_DMA, DMA_IT_HT);
 	}

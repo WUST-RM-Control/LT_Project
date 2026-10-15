@@ -36,11 +36,13 @@ static float WheelLeg_SpringComp_Fit_K_Out_Of_Range(const float *Cal_Data,Motor_
 
 //超出标定范围外推:拟合所用末尾有效数据项数
 #define Out_Of_Range_Fit_Num 40
+//超出标定范围外推:拟合所用末尾有效数据项数
+#define Bad_Num 25
 
 //0:L   1:R
 //末尾Out_Of_Range_Fit_Num项有效数据拟合直线斜率(力矩/腿长)
 static float WheelLeg_SpringComp_K_Out_Of_Range[2];
-//有效数据(默认UP的末尾15个不可用)，在WheelLeg_SpringComp_Fit_K_Out_Of_Range中赋值
+//有效数据(默认UP的末尾Bad_Num个不可用)，在WheelLeg_SpringComp_Fit_K_Out_Of_Range中赋值
 static int16_t Encoder_Max[2];
 
 static Config_StructTypedef Config;
@@ -130,20 +132,19 @@ void WheelLeg_SpringComp_Init(void)
 /**
  * ===| 氮气弹簧补偿 |===
  * @param Leg---------------Chassis_Leg_StructTypedef结构体包含如下内容
- * @param Length_Feedback---当前腿长
- * @param Length_Target-----目标腿长
+ * @param Error_Length------目标腿长-当前腿长
  * @param GasSpring_Output--[out]输出补偿力矩，沿腿方向，一般为负值(收腿方向为负方向)
  * @param Leg_LR------------0:左腿(Leg_L)，1:右腿(Leg_R)
  **/
-void WheelLeg_SpringComp(Chassis_Leg_StructTypedef *Leg)
+void WheelLeg_SpringComp(Chassis_Leg_StructTypedef *Leg,float Error_Length)
 {
     if(Leg->Leg_LR == Leg_L)
     {
-        Leg->GasSpring_Output = Motor_Compensation_Get_Data(Leg->Length_Feedback, Leg->Length_Target-Leg->Length_Feedback, &L0_Leg_L_Compensation_Config);
+        Leg->GasSpring_Output = Motor_Compensation_Get_Data(Leg->Length_Feedback, Error_Length, &L0_Leg_L_Compensation_Config);
     }
     else if(Leg->Leg_LR == Leg_R)
     {
-        Leg->GasSpring_Output = Motor_Compensation_Get_Data(Leg->Length_Feedback, Leg->Length_Target-Leg->Length_Feedback, &L0_Leg_R_Compensation_Config);
+        Leg->GasSpring_Output = Motor_Compensation_Get_Data(Leg->Length_Feedback, Error_Length, &L0_Leg_R_Compensation_Config);
     }
     else
     {
@@ -533,7 +534,7 @@ static float Motor_Compensation_Get_Data(float Distance, float Error, Motor_Comp
 
     float Coggin_Torque = Config->Data[Encoder];
     float Friction_Torque_Target = 0.0f;
-    float Error_K = 4.0f*fabsf(Error/(Config->Compensation_Distance_UP-Config->Compensation_Distance_Down));
+    float Error_K = 6.0f*fabsf(Error/(Config->Compensation_Distance_UP-Config->Compensation_Distance_Down));
     Limit_float(&Error_K,Config->Friction_K,0.0f);
     if(Error > 0)       Friction_Torque_Target =  Config->Data[Encoder+Point_Num] * Error_K * Config->Start_State;
     else if(Error < 0)  Friction_Torque_Target = -Config->Data[Encoder+Point_Num] * Error_K * Config->Start_State;
@@ -555,7 +556,7 @@ static float Motor_Compensation_Get_Data(float Distance, float Error, Motor_Comp
  **/
 static float WheelLeg_SpringComp_Fit_K_Out_Of_Range(const float *Cal_Data,Motor_Compensation_Config_StructTypedef Config)
 {
-    Encoder_Max[Config.Leg_RL_State] = fmodf(Config.Compensation_Distance_UP, Config.Compensation_Distance_Range) * Point_Num / Config.Compensation_Distance_Range -15;
+    Encoder_Max[Config.Leg_RL_State] = fmodf(Config.Compensation_Distance_UP, Config.Compensation_Distance_Range) * Point_Num / Config.Compensation_Distance_Range -Bad_Num;
     int16_t Encoder_Min = fmodf(Config.Compensation_Distance_Down, Config.Compensation_Distance_Range) * Point_Num / Config.Compensation_Distance_Range;
     
     double Sum_X = 0.0, Sum_Y = 0.0, Sum_XX = 0.0, Sum_XY = 0.0;

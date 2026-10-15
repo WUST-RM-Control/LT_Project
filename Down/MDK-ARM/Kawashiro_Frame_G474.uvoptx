@@ -157,35 +157,25 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>82</LineNumber>
+          <LineNumber>38</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134332544</Address>
+          <Address>134326908</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
           <SizeOfObject>0</SizeOfObject>
           <BreakByAccess>0</BreakByAccess>
           <BreakIfRCount>1</BreakIfRCount>
-          <Filename>../Core/Src/main.c</Filename>
+          <Filename>..\Project\WheelLeg\WheelLeg_Output.c</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\Kawashiro_Frame_G474\../Core/Src/main.c\82</Expression>
+          <Expression>\\Kawashiro_Frame_G474\../Project/WheelLeg/WheelLeg_Output.c\38</Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>
         <Ww>
           <count>0</count>
           <WinNumber>1</WinNumber>
-          <ItemText>L_A0_KF</ItemText>
-        </Ww>
-        <Ww>
-          <count>1</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>R_A0_KF</ItemText>
-        </Ww>
-        <Ww>
-          <count>2</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>Time</ItemText>
+          <ItemText>WheelLeg_Output_Struct</ItemText>
         </Ww>
       </WatchWindow1>
       <WatchWindow2>
@@ -777,7 +767,7 @@
 
   <Group>
     <GroupName>Algorithm_Drivers</GroupName>
-    <tvExp>0</tvExp>
+    <tvExp>1</tvExp>
     <tvExpOptDlg>0</tvExpOptDlg>
     <cbSel>0</cbSel>
     <RteFlg>0</RteFlg>

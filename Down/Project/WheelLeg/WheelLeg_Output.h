@@ -14,8 +14,6 @@ typedef struct
     PID_Struct_TypeDef Leg_Angle_PID;
     //腿摆角速度环PID
     PID_Struct_TypeDef Leg_Angle_Speed_PID;
-    //腿长位置环PID
-    PID_Struct_TypeDef Leg_Length_PID;
     //腿长速度环PID
     PID_Struct_TypeDef Leg_Length_Speed_PID;
 
@@ -39,6 +37,12 @@ typedef struct
 typedef struct
 {
 //Leg
+    //腿长位置环PID
+    PID_Struct_TypeDef Leg_Length_PID;
+    //Roll补偿
+    PID_Struct_TypeDef Leg_Roll_PID;
+    //-左腿，+右腿
+    PID_Struct_TypeDef Leg_Roll_Speed_PID;
     WheelLeg_Output_Leg_StructTypedef Leg_Left;
     WheelLeg_Output_Leg_StructTypedef Leg_Right;
 
