@@ -136,6 +136,7 @@ void Motor_DM_Storage_Data(uint8_t *Data, Motor_Data_StructTypeDef *Motor_Data_S
     if(Error_ID == 1)
     {
         Motor_Data_Struct->Ticker = 0;
+        Motor_Data_Struct->Date_New = 1;
         Motor_Data_Struct->If_Online = 1; 
     }
 }

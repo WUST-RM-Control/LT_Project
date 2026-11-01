@@ -16,6 +16,7 @@ typedef enum
 	//失能
 		//失能
 		Chassis_OFF = 0,
+		//仅测试使用，比赛禁用
 		//缓失能
 		Chassis_OFF_Slow=1,
 
@@ -27,7 +28,6 @@ typedef enum
 		Chassis_RESET=3,
 		//倒地缓自起(PID自起)
 		Chassis_RESET_Slow=4,
-	
 	//使能
 		//底盘跟随
 		Chassis_FOLLOW=5,
@@ -38,8 +38,8 @@ typedef enum
 		//磕台阶
 		Chassis_UpStep=8,
 
-	//离地&错误姿态
-		Chassis_Off_ground=9,
+	// //离地&错误姿态
+	// 	Chassis_Off_ground=9,
 
 	//测试
 		Chassis_Text=-1
@@ -67,8 +67,23 @@ typedef struct
     
     //跳跃
     //0：非跳跃状态或标志位赋值完成
-	//1：准备状态(标志位挂起)
+	//1：准备状态(标志位挂起与蓄力，保证腿长低于Chassis_Jump_Ready_Link_Arrive蓄力腿长阈值)
+	//2：蹬腿跳跃
+	//3：空中收腿(LQR仅保留控制摆角的控制量,轮电机输出0)
+	//4：落地缓冲(空中伸腿，落地缓冲)
     uint8_t Chassis_Jump_FLag;
+
+    //底盘使能Chassis_FOLLOW或Chassis_SPIN时可置1
+	//底盘离地标志位
+	//0：正常
+	//1：两腿同时离地且Z轴加速度达标
+    uint8_t Off_ground_Flag;
+
+	//底盘使能Chassis_FOLLOW或Chassis_UpStep可修改
+	//0：非上台阶状态或已完成
+	//1：准备上台阶，进入Chassis_UpStep状态，并和Chassis_FOLLOW运控一致
+	//2：磕到台阶后向后摆腿同时收腿，Chassis_UpStep状态下PID控制摆腿收腿
+	uint8_t Up_Step_Flag;
 
 } WheelLeg_Control_Flag_StructTypeDef;
 
@@ -150,12 +165,17 @@ typedef struct
 		//0：L沿杆方向的，1：T关节为绕轴力矩
 		//沿杆的力：伸腿方向为正方向
 		//绕轴力矩：左(右)侧看逆时针为正方向
-			//LQR输出
+			//LQR运控下的沿杆的额外力(跳跃)[0]
+			//LQR输出(Torque)[1]
 			float LQR_Link_Torque_Target[2];
 			//轮电机目标力矩(未限幅,WheelLeg_Output函数中限幅)
 			float LQR_Wheel_Torque_Target;
 			// //PID输出
 			// float PID_Link_Torque_Target[2];
+			//本周期实际输出的用于支撑机体的虚拟沿杆力(N,伸腿方向为正,WheelLeg_Output赋值,供离地检测使用)
+			float Link_Output;
+			//本周期实际输出的绕轴力矩(N,伸腿方向为正,WheelLeg_Output赋值,供离地检测使用)
+			float Torque_Output;
 
 // //Wheel
 // 	//轮电机力矩(PID输出和LQR)

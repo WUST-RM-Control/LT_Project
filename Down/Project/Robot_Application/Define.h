@@ -52,7 +52,10 @@
 #define Chassis_Motor1_Feedback_CAN_ID          0x203       //左腿轮电机1CAN反馈ID 	
 #define Chassis_Motor2_Feedback_CAN_ID      	0x204       //右腿轮电机2CAN反馈ID
 
-#define Chassis_JointMotor_CAN					hfdcan1            			   
+#define Chassis_JointMotor1_CAN					hfdcan1     //左腿车头电机
+#define Chassis_JointMotor2_CAN					hfdcan1     //左腿车尾电机
+#define Chassis_JointMotor3_CAN					hfdcan1     //右腿车头电机
+#define Chassis_JointMotor4_CAN					hfdcan2     //右腿车尾电机
 #define Chassis_JointMotor1_Send_CAN_ID			0x02    //左腿车头电机
 #define Chassis_JointMotor1_Feedback_ID			0x12    //左腿车头电机
 #define Chassis_JointMotor2_Send_CAN_ID			0x01    //左腿车尾电机

@@ -159,16 +159,16 @@ static void Leg_State_KF_Update(Chassis_Leg_StructTypedef *Leg_Date, PosVelKF_t 
 
 	Leg_Date->Length_Feedback       = kf_L0->x;
 	Leg_Date->Length_Speed          = kf_L0->v;
-	// Leg_Date->Total_Angle_Feedback  = kf_A0->x;
-	// Leg_Date->Total_Angle_Speed     = kf_A0->v;
-    // if(Leg_Date->Leg_LR == Leg_R)
-    // {
-    //     VOFA_JustFloat_AddValue(0,Leg_Date->Total_Angle_Feedback);
-    //     VOFA_JustFloat_AddValue(1,Leg_Date->Total_Angle_Speed);
-    //     VOFA_JustFloat_AddValue(2,kf_A0->x);
-    //     VOFA_JustFloat_AddValue(3,kf_A0->v);
+	Leg_Date->Total_Angle_Feedback  = kf_A0->x;
+	Leg_Date->Total_Angle_Speed     = kf_A0->v;
+    if(Leg_Date->Leg_LR == Leg_R)
+    {
+        VOFA_JustFloat_AddValue(0,Leg_Date->Total_Angle_Feedback);
+        VOFA_JustFloat_AddValue(1,Leg_Date->Total_Angle_Speed);
+        VOFA_JustFloat_AddValue(2,kf_A0->x);
+        VOFA_JustFloat_AddValue(3,kf_A0->v);
 
-    // }
+    }
 
 }
 
@@ -304,6 +304,8 @@ static void WheelLeg_Kinematics_Assign(Chassis_Leg_StructTypedef *Chassis_Leg_Da
     Chassis_Leg_Date->Total_Angle_Feedback = 360.0f * Chassis_Leg_Date->Angle_Round + Chassis_Leg_Date->Angle_Feedback;
     //计算速度(腿长在滤波波中赋值)
     Chassis_Leg_Date->Total_Angle_Speed = (Chassis_Leg_Date->Total_Angle_Feedback - Chassis_Leg_Date->Total_Angle_Last)/Dt;
+    Chassis_Leg_Date->Length_Speed = (Chassis_Leg_Date->Length_Feedback - Chassis_Leg_Date->Length_Last)/Dt;
+
 
     //雅可比矩阵
     Chassis_Leg_Date->Jt[0][0] = LegKinematics_Leg_Date.Jt[0][0];
@@ -315,18 +317,30 @@ static void WheelLeg_Kinematics_Assign(Chassis_Leg_StructTypedef *Chassis_Leg_Da
 //运动学数据更新
 void WheelLeg_Kinematics_Update(Chassis_Control_StructTypedef *Chassis_Control_Struct)
 {
-    //运动学结束算
-    WheelLeg_ForwardKinematics(&wheelLeg_kinematics_Struct.Left,  Motor.Joint1.Angle, Motor.Joint2.Angle);
-    WheelLeg_ForwardKinematics(&wheelLeg_kinematics_Struct.Right,  Motor.Joint4.Angle, Motor.Joint3.Angle);
+    if(Motor.Joint1.Date_New == 1&&Motor.Joint2.Date_New == 1)
+    {
+        Motor.Joint1.Date_New = 0;
+        Motor.Joint2.Date_New = 0;
+        //运动学结束算
+        WheelLeg_ForwardKinematics(&wheelLeg_kinematics_Struct.Left,  Motor.Joint1.Angle, Motor.Joint2.Angle);
 
-    //滤波前数据赋值
-    WheelLeg_Kinematics_Assign(&Chassis_Control_Struct->Leg_Left, wheelLeg_kinematics_Struct.Left, Chassis_Control_Struct->Chassis_Dt);
-    WheelLeg_Kinematics_Assign(&Chassis_Control_Struct->Leg_Right,wheelLeg_kinematics_Struct.Right, Chassis_Control_Struct->Chassis_Dt);
+        //滤波前数据赋值
+        WheelLeg_Kinematics_Assign(&Chassis_Control_Struct->Leg_Left, wheelLeg_kinematics_Struct.Left, Chassis_Control_Struct->Chassis_Dt);
+    }
+    if(Motor.Joint3.Date_New == 1&&Motor.Joint4.Date_New == 1)
+    {
+        Motor.Joint3.Date_New = 0;
+        Motor.Joint4.Date_New = 0;
+        //运动学结束算
+        WheelLeg_ForwardKinematics(&wheelLeg_kinematics_Struct.Right,  Motor.Joint4.Angle, Motor.Joint3.Angle);
 
-    //卡尔曼滤波
-    //位置-速度卡尔曼滤波
-    Leg_State_KF_Update(&Chassis_Control_Struct->Leg_Left,  &L_L0_KF, &L_A0_KF, Chassis_Control_Struct->Chassis_Dt);
-    Leg_State_KF_Update(&Chassis_Control_Struct->Leg_Right, &R_L0_KF, &R_A0_KF, Chassis_Control_Struct->Chassis_Dt);
+        //滤波前数据赋值
+        WheelLeg_Kinematics_Assign(&Chassis_Control_Struct->Leg_Right,wheelLeg_kinematics_Struct.Right, Chassis_Control_Struct->Chassis_Dt);
+    }
+    // //卡尔曼滤波
+    // //位置-速度卡尔曼滤波
+    // Leg_State_KF_Update(&Chassis_Control_Struct->Leg_Left,  &L_L0_KF, &L_A0_KF, Chassis_Control_Struct->Chassis_Dt);
+    // Leg_State_KF_Update(&Chassis_Control_Struct->Leg_Right, &R_L0_KF, &R_A0_KF, Chassis_Control_Struct->Chassis_Dt);
 	
 	//底盘状态数据计算
 	Chassis_Control_Struct->Chassis_Control.Leg_Length_Feebback = (Chassis_Control_Struct->Leg_Left.Length_Feedback + Chassis_Control_Struct->Leg_Right.Length_Feedback)*0.5;

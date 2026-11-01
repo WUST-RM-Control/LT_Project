@@ -139,7 +139,7 @@ float Caculate_Distence(float X, float Y)
     return (sqrtf(X*X + Y*Y));
 }
 
-//计算两个任意角度的夹角，返回2相对1的角度差(-180~+180)
+//返回1有方向旋转到2的角度(-180~+180)，逆时针为正
 float Caculate_Included_Angle(float Angle1, float Angle2)
 {
 	float Err = fmodf(Angle2 - Angle1, 360);

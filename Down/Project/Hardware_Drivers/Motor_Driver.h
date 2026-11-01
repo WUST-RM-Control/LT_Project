@@ -21,8 +21,9 @@ typedef struct
 	float Torque;           //力矩[电流]
     int8_t Temperature;     //电机温度
 	uint16_t Ticker;        //收到数据计时
-    uint8_t If_Online;      //是否在线  
+    uint8_t If_Online;      //是否在线
 	uint8_t Error_ID;
+    uint8_t Date_New;
 } Motor_Data_StructTypeDef;
 
 

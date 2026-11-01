@@ -39,6 +39,12 @@ static float WheelLeg_SpringComp_Fit_K_Out_Of_Range(const float *Cal_Data,Motor_
 //超出标定范围外推:拟合所用末尾有效数据项数
 #define Bad_Num 25
 
+//腿长速度对应的摩擦力权重
+//当腿长变化速度到达Leg_Link_Length_Speed_2_Friction倒数时摩擦力权重给满.Friction_K=1
+//Leg_Link_Length_Speed_2_Friction倒数不要太小，咱腿的摩擦力太大，会导致抖动
+//拉完了
+// const float Leg_Link_Length_Speed_2_Friction = 1/0.3f;
+
 //0:L   1:R
 //末尾Out_Of_Range_Fit_Num项有效数据拟合直线斜率(力矩/腿长)
 static float WheelLeg_SpringComp_K_Out_Of_Range[2];
@@ -534,7 +540,7 @@ static float Motor_Compensation_Get_Data(float Distance, float Error, Motor_Comp
 
     float Coggin_Torque = Config->Data[Encoder];
     float Friction_Torque_Target = 0.0f;
-    float Error_K = 6.0f*fabsf(Error/(Config->Compensation_Distance_UP-Config->Compensation_Distance_Down));
+   float Error_K = 6.0f*fabsf(Error/(Config->Compensation_Distance_UP-Config->Compensation_Distance_Down));
     Limit_float(&Error_K,Config->Friction_K,0.0f);
     if(Error > 0)       Friction_Torque_Target =  Config->Data[Encoder+Point_Num] * Error_K * Config->Start_State;
     else if(Error < 0)  Friction_Torque_Target = -Config->Data[Encoder+Point_Num] * Error_K * Config->Start_State;

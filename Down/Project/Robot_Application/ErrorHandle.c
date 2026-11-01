@@ -182,30 +182,30 @@ void ErrorHandle_Task(void *argument)
 		/*===| 关节电机离线断连处理 |===*/
         if(Motor.Joint1.Ticker == 110)      
         {
-            Motor_DM_CMD_ClearErr(&Chassis_JointMotor_CAN, Chassis_JointMotor1_Send_CAN_ID);
+            Motor_DM_CMD_ClearErr(&Chassis_JointMotor1_CAN, Chassis_JointMotor1_Send_CAN_ID);
             osDelay(1);
-            Motor_DM_CMD_Enable(&Chassis_JointMotor_CAN,Chassis_JointMotor1_Send_CAN_ID);
+            Motor_DM_CMD_Enable(&Chassis_JointMotor1_CAN,Chassis_JointMotor1_Send_CAN_ID);
 			osDelay(1);
         }
 		if(Motor.Joint2.Ticker == 110)      
         {
-            Motor_DM_CMD_ClearErr(&Chassis_JointMotor_CAN, Chassis_JointMotor2_Send_CAN_ID);
+            Motor_DM_CMD_ClearErr(&Chassis_JointMotor2_CAN, Chassis_JointMotor2_Send_CAN_ID);
             osDelay(1);
-            Motor_DM_CMD_Enable(&Chassis_JointMotor_CAN,Chassis_JointMotor2_Send_CAN_ID);
+            Motor_DM_CMD_Enable(&Chassis_JointMotor2_CAN,Chassis_JointMotor2_Send_CAN_ID);
 			osDelay(1);
         }
 		if(Motor.Joint3.Ticker == 110)      
         {
-            Motor_DM_CMD_ClearErr(&Chassis_JointMotor_CAN, Chassis_JointMotor3_Send_CAN_ID);
+            Motor_DM_CMD_ClearErr(&Chassis_JointMotor3_CAN, Chassis_JointMotor3_Send_CAN_ID);
             osDelay(1);
-            Motor_DM_CMD_Enable(&Chassis_JointMotor_CAN,Chassis_JointMotor3_Send_CAN_ID);
+            Motor_DM_CMD_Enable(&Chassis_JointMotor3_CAN,Chassis_JointMotor3_Send_CAN_ID);
 			osDelay(1);
         }
 		if(Motor.Joint4.Ticker == 110)      
         {
-            Motor_DM_CMD_ClearErr(&Chassis_JointMotor_CAN, Chassis_JointMotor4_Send_CAN_ID);
+            Motor_DM_CMD_ClearErr(&Chassis_JointMotor4_CAN, Chassis_JointMotor4_Send_CAN_ID);
             osDelay(1);
-            Motor_DM_CMD_Enable(&Chassis_JointMotor_CAN,Chassis_JointMotor4_Send_CAN_ID);
+            Motor_DM_CMD_Enable(&Chassis_JointMotor4_CAN,Chassis_JointMotor4_Send_CAN_ID);
 			osDelay(1);
         }
 		

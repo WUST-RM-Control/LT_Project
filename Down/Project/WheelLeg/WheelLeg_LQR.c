@@ -227,7 +227,7 @@ void WheelLeg_LQR_Init(void)
 
 }
 
-static void WheelLeg_LQR_calculation(Chassis_Leg_StructTypedef *Leg_Date, const Chassis_State_EnumTypedef Chsssis_State)
+static void WheelLeg_LQR_calculation(Chassis_Leg_StructTypedef *Leg_Date, const Chassis_Control_StructTypedef Chassis_Control)
 {	
 	float *LQR_K_LR;
 	float theta,theta_d,xb,xb_d,phi,phi_d;
@@ -255,20 +255,38 @@ static void WheelLeg_LQR_calculation(Chassis_Leg_StructTypedef *Leg_Date, const 
 //	Chassis_Control_Struct.Torque_Joint_left=-Chassis_Control_Struct.Left_leg_Angle_PID.Output;
 	
     float Torque_wheel_left = -( LQR_K_LR[0] * theta + LQR_K_LR[1] * theta_d + LQR_K_LR[2] * xb + LQR_K_LR[3] * xb_d + LQR_K_LR[4] * phi + LQR_K_LR[5] * phi_d );
-    Leg_Date->LQR_Link_Torque_Target[1] =  ( LQR_K_LR[6] * theta + LQR_K_LR[7] * theta_d + LQR_K_LR[8] * xb + LQR_K_LR[9] * xb_d + LQR_K_LR[10] * phi + LQR_K_LR[11] * phi_d ) + (WheelLeg_LQR_Struct.Leg_Splits_PID.Output);
-
-	if(Chsssis_State == Chassis_Jump)
+    
+	if(Chassis_Control.Chassis_Control.Chassis_State == Chassis_Jump)
 	{
-		Leg_Date->LQR_Wheel_Torque_Target = Torque_wheel_left;
+		if(Chassis_Control.WheelLeg_Control_Flag.Chassis_Jump_FLag == 0
+		|| Chassis_Control.WheelLeg_Control_Flag.Chassis_Jump_FLag == 1
+		|| Chassis_Control.WheelLeg_Control_Flag.Chassis_Jump_FLag == 2
+		|| Chassis_Control.WheelLeg_Control_Flag.Chassis_Jump_FLag == 4)
+		{
+			Leg_Date->LQR_Wheel_Torque_Target = Torque_wheel_left + WheelLeg_LQR_Struct.Wheel_Wz_Speed_PID.Output;
+			Leg_Date->LQR_Link_Torque_Target[1] =  ( LQR_K_LR[6] * theta + LQR_K_LR[7] * theta_d + LQR_K_LR[8] * xb + LQR_K_LR[9] * xb_d + LQR_K_LR[10] * phi + LQR_K_LR[11] * phi_d ) + (WheelLeg_LQR_Struct.Leg_Splits_PID.Output);
+		}
+		else if(Chassis_Control.WheelLeg_Control_Flag.Chassis_Jump_FLag == 3)
+		{
+			Leg_Date->LQR_Wheel_Torque_Target = 0.0f;
+			Leg_Date->LQR_Link_Torque_Target[1] =  (LQR_K_LR[6] * theta + LQR_K_LR[7] * theta_d) + (WheelLeg_LQR_Struct.Leg_Splits_PID.Output);
+		}
+		
 	}
-	else if(Chsssis_State == Chassis_Off_ground)
+	// else if(Chassis_Control.Chassis_Control.Chassis_State == Chassis_Off_ground)
+	
+	else//正常使能
 	{
-		Leg_Date->LQR_Wheel_Torque_Target = 0;//左轮电机输出置0
-		Leg_Date->LQR_Link_Torque_Target[1] =(LQR_K_LR[6]*(theta) + LQR_K_LR[7]*(theta_d)) + (WheelLeg_LQR_Struct.Leg_Splits_PID.Output);//左关节力矩只保留摆角控制量
-	}
-	else
-	{
-		Leg_Date->LQR_Wheel_Torque_Target = Torque_wheel_left + WheelLeg_LQR_Struct.Wheel_Wz_Speed_PID.Output;
+		if(Chassis_Control.WheelLeg_Control_Flag.Off_ground_Flag == 1)
+		{
+			Leg_Date->LQR_Wheel_Torque_Target = 0;//左轮电机输出置0
+			Leg_Date->LQR_Link_Torque_Target[1] =(LQR_K_LR[6]*(theta) + LQR_K_LR[7]*(theta_d)) + (WheelLeg_LQR_Struct.Leg_Splits_PID.Output);//左关节力矩只保留摆角控制量
+		}
+		else
+		{
+			Leg_Date->LQR_Wheel_Torque_Target = Torque_wheel_left + WheelLeg_LQR_Struct.Wheel_Wz_Speed_PID.Output;
+			Leg_Date->LQR_Link_Torque_Target[1] =  ( LQR_K_LR[6] * theta + LQR_K_LR[7] * theta_d + LQR_K_LR[8] * xb + LQR_K_LR[9] * xb_d + LQR_K_LR[10] * phi + LQR_K_LR[11] * phi_d ) + (WheelLeg_LQR_Struct.Leg_Splits_PID.Output);
+		}
 	}
 	// //theta_d
 	// //R当前腿长好像有问题
@@ -292,8 +310,11 @@ void WheelLeg_LQR_Output(Chassis_Control_StructTypedef *Chassis_Control)
 {
 	WheelLeg_LQR_Calculated_Displacement(Chassis_Control);
 
+	//Chassis_UpStep也照常解算LQR:准备态(Up_Step_Flag = 1)与Chassis_FOLLOW运控完全一致
 	if(Chassis_Control->Chassis_Control.Chassis_State == Chassis_FOLLOW
-	|| Chassis_Control->Chassis_Control.Chassis_State == Chassis_SPIN)
+	|| Chassis_Control->Chassis_Control.Chassis_State == Chassis_SPIN
+	|| Chassis_Control->Chassis_Control.Chassis_State == Chassis_Jump
+	|| Chassis_Control->Chassis_Control.Chassis_State == Chassis_UpStep)
 	{
 		WheelLeg_LQR_add_six_state(Chassis_Control);
 
@@ -301,8 +322,8 @@ void WheelLeg_LQR_Output(Chassis_Control_StructTypedef *Chassis_Control)
 
 		WheelLeg_LQR_PID_Patch(Chassis_Control);
 
-		WheelLeg_LQR_calculation(&Chassis_Control->Leg_Left,  Chassis_Control->Chassis_Control.Chassis_State);
-		WheelLeg_LQR_calculation(&Chassis_Control->Leg_Right, Chassis_Control->Chassis_Control.Chassis_State);
+		WheelLeg_LQR_calculation(&Chassis_Control->Leg_Left,  *Chassis_Control);
+		WheelLeg_LQR_calculation(&Chassis_Control->Leg_Right, *Chassis_Control);
 	}
 		
 }

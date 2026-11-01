@@ -71,10 +71,19 @@ void Chassis_Task(void const * argument)
         WheelLeg_Kinematics_Update(&Chassis_Control_Struct);
 
         /*===| 翻倒自起 |===*/
-        Chassis_Smooth_Restand(&Chassis_Control_Struct);
+        Chassis_Smooth_Restand_Fun(&Chassis_Control_Struct);
+
+        /*===| 跳跃 |===*/
+        Chassis_Jump_Fun(&Chassis_Control_Struct);
+
+        /*===| 缓失能 |===*/
+        Chassis_OFF_Slow_Fun(&Chassis_Control_Struct,RoboControl_Struct.Smooth_Start_K);
         
         /*===| LQR运控解算 |===*/
         WheelLeg_LQR_Output(&Chassis_Control_Struct);
+
+        /*===| 上台阶(磕台阶后摆腿+收腿,覆盖LQR输出) |===*/
+        Chassis_Up_Step_Fun(&Chassis_Control_Struct);
 
         /*===| 氮气弹簧补偿 |===*/
         WheelLeg_SpringComp(&Chassis_Control_Struct.Leg_Left, Chassis_Control_Struct.Chassis_Control.Leg_Length_Target - Chassis_Control_Struct.Chassis_Control.Leg_Length_Feebback);
@@ -82,6 +91,9 @@ void Chassis_Task(void const * argument)
 
         /*===| 输出 |===*/
         WheelLeg_Output(&Chassis_Control_Struct);
+
+        /*===| 错误状态检测(离地) |===*/
+        Chassis_Off_Ground_Fun(&Chassis_Control_Struct);
 
         osDelay(1);
     }
@@ -115,6 +127,16 @@ void Get_Control_Data(Chassis_Control_StructTypedef *Chassis_Control_Struct)
         Chassis_Control_Struct->WheelLeg_Control_Flag.Chassis_RESET_Slow_FLag = RoboControl_Struct.Chassis_Control_Flag.Chassis_RESET_Slow_FLag;
         RoboControl_Struct.Chassis_Control_Flag.Chassis_RESET_Slow_FLag = 0;
     }
+    if(RoboControl_Struct.Chassis_Control_Flag.Chassis_Jump_FLag)
+    {
+        Chassis_Control_Struct->WheelLeg_Control_Flag.Chassis_Jump_FLag = RoboControl_Struct.Chassis_Control_Flag.Chassis_Jump_FLag;
+        RoboControl_Struct.Chassis_Control_Flag.Chassis_Jump_FLag = 0;
+    }
+    if(RoboControl_Struct.Chassis_Control_Flag.Up_Step_Flag)
+    {
+        Chassis_Control_Struct->WheelLeg_Control_Flag.Up_Step_Flag = RoboControl_Struct.Chassis_Control_Flag.Up_Step_Flag;
+        RoboControl_Struct.Chassis_Control_Flag.Up_Step_Flag = 0;
+    }
 
     //底盘运动目标速度
     Chassis_Control_Struct->Chassis_Control.Vy_Target = RoboControl_Struct.Robo_Target_Vy;
@@ -122,13 +144,22 @@ void Get_Control_Data(Chassis_Control_StructTypedef *Chassis_Control_Struct)
     Chassis_Control_Struct->Chassis_Control.Wz_Speed_Target = RoboControl_Struct.Robo_Target_Wz;
 
     Chassis_Control_Struct->Chassis_Control.Jump_Level = RoboControl_Struct.Jump_Level;
-    // Chassis_Control_Struct->Chassis_Control.Leg_Length_Target = RoboControl_Struct.Leg_Length;
 
-    //腿部数据
+    //腿部腿长数据
+    static float Leg_Length_Target_Last;
     if(Chassis_Control_Struct->Chassis_Control.Chassis_State == Chassis_FOLLOW
     || Chassis_Control_Struct->Chassis_Control.Chassis_State == Chassis_SPIN)
     {
-        Chassis_Control_Struct->Chassis_Control.Leg_Length_Target = RoboControl_Struct.Leg_Length;
+        if(Leg_Length_Target_Last != RoboControl_Struct.Leg_Length)
+        {
+            Chassis_Control_Struct->Chassis_Control.Leg_Length_Target = RoboControl_Struct.Leg_Length;
+            Leg_Length_Target_Last = RoboControl_Struct.Leg_Length;
+        }
+        else if(Leg_Length_Target_Last != Chassis_Control_Struct->Chassis_Control.Leg_Length_Target)
+        {
+            RoboControl_Struct.Leg_Length = Chassis_Control_Struct->Chassis_Control.Leg_Length_Target;
+            Leg_Length_Target_Last = RoboControl_Struct.Leg_Length;
+        }
     }
     else if(Chassis_Control_Struct->Chassis_Control.Chassis_State == Chassis_OFF)
     {
