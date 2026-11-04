@@ -210,6 +210,9 @@ const volatile Motor_Data_StructTypeDef * const Motor4)
 
     while(*Enable_Output == 0)osDelay(5);
 
+    //开始的1000ms固定摆角
+    static uint16_t Tim_PID_Angle = 0;
+    Tim_PID_Angle = 0;
 if(Leg_LR==Leg_L)
 {
 /*===| 左腿 |===*/
@@ -235,9 +238,15 @@ if(Leg_LR==Leg_L)
         L0_Leg_L_Compensation_Config.Dt = DWT_GetDeltaT(&L0_Leg_L_Compensation_Config.DWT_Counter);
         //前置计算与采样赋值
         Leg_Date_Compensation_Calculate(&L0_Leg_L_Compensation_Config,Motor1,Motor2,Motor3,Motor4);
-
-        //更新校准数据(设置目标角度与速度，PID计算，保存校准值)
-        Motor_Compensation(&L0_Leg_L_Compensation_Config);
+        if(Tim_PID_Angle<1000)
+        {
+            Tim_PID_Angle++;
+        }
+        else
+        {
+            //更新校准数据(设置目标角度与速度，PID计算，保存校准值)
+            Motor_Compensation(&L0_Leg_L_Compensation_Config);
+        }
         //输出电流
         {
                 L0_Leg_L_Compensation_Config.L_T_Target[0] = L0_Leg_L_Compensation_Config.Current_Output;
@@ -264,7 +273,12 @@ if(Leg_LR==Leg_L)
         }
         osDelay(1);
     }
-
+    for (uint8_t i = 0; i < 50; i++) 
+    {
+        
+        Fun_Motor_Joint_Wheel_Output(0, 0, 0, 0, 0, 0);
+        osDelay(5);
+    }
     //计算齿槽补偿与摩擦补偿
     for(uint16_t i = 0; i < Point_Num; i++) 
     {
@@ -298,9 +312,15 @@ else if(Leg_LR==Leg_R)
         //前置计算与采样赋值
         Leg_Date_Compensation_Calculate(&L0_Leg_R_Compensation_Config,Motor1,Motor2,Motor3,Motor4);
 
-
-        //更新校准数据(设置目标角度与速度，PID计算，保存校准值)
-        Motor_Compensation(&L0_Leg_R_Compensation_Config);
+        if(Tim_PID_Angle<1000)
+        {
+            Tim_PID_Angle++;
+        }
+        else
+        {
+            //更新校准数据(设置目标角度与速度，PID计算，保存校准值)
+            Motor_Compensation(&L0_Leg_R_Compensation_Config);
+        }
         //输出电流
         {
                 L0_Leg_R_Compensation_Config.L_T_Target[0] = L0_Leg_R_Compensation_Config.Current_Output;
@@ -328,7 +348,12 @@ else if(Leg_LR==Leg_R)
         }
         osDelay(1);
     }
-
+    for (uint8_t i = 0; i < 50; i++) 
+    {
+        
+        Fun_Motor_Joint_Wheel_Output(0, 0, 0, 0, 0, 0);
+        osDelay(5);
+    }
     //计算齿槽补偿与摩擦补偿
     for(uint16_t i = 0; i < Point_Num; i++) 
     {
@@ -369,6 +394,12 @@ else if(Leg_LR==Leg_R)
 		osDelay(500);
 		//标定完成音效
 		Buzzer_Set_SoundEffect(Buzzer_SoundEffect_SystemStart);
+        for (uint8_t i = 0; i < 500; i++) 
+        {
+            
+            Fun_Motor_Joint_Wheel_Output(0, 0, 0, 0, 0, 0);
+            osDelay(10);
+        }
         return 1;
 	}
     return 0;

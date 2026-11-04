@@ -318,24 +318,28 @@ static void WheelLeg_Kinematics_Assign(Chassis_Leg_StructTypedef *Chassis_Leg_Da
 void WheelLeg_Kinematics_Update(Chassis_Control_StructTypedef *Chassis_Control_Struct)
 {
     if(Motor.Joint1.Date_New == 1&&Motor.Joint2.Date_New == 1)
-    {
+    {   
+        wheelLeg_kinematics_Struct.Left.Dt = DWT_GetDeltaT(&wheelLeg_kinematics_Struct.Left.Dt_Count);
+        if(wheelLeg_kinematics_Struct.Left.Dt>0.1f) wheelLeg_kinematics_Struct.Left.Dt=0.001;
         Motor.Joint1.Date_New = 0;
         Motor.Joint2.Date_New = 0;
         //运动学结束算
         WheelLeg_ForwardKinematics(&wheelLeg_kinematics_Struct.Left,  Motor.Joint1.Angle, Motor.Joint2.Angle);
 
         //滤波前数据赋值
-        WheelLeg_Kinematics_Assign(&Chassis_Control_Struct->Leg_Left, wheelLeg_kinematics_Struct.Left, Chassis_Control_Struct->Chassis_Dt);
+        WheelLeg_Kinematics_Assign(&Chassis_Control_Struct->Leg_Left, wheelLeg_kinematics_Struct.Left, wheelLeg_kinematics_Struct.Left.Dt);
     }
     if(Motor.Joint3.Date_New == 1&&Motor.Joint4.Date_New == 1)
     {
+        wheelLeg_kinematics_Struct.Right.Dt = DWT_GetDeltaT(&wheelLeg_kinematics_Struct.Right.Dt_Count);
+        if(wheelLeg_kinematics_Struct.Right.Dt>0.1f) wheelLeg_kinematics_Struct.Right.Dt=0.001;
         Motor.Joint3.Date_New = 0;
         Motor.Joint4.Date_New = 0;
         //运动学结束算
         WheelLeg_ForwardKinematics(&wheelLeg_kinematics_Struct.Right,  Motor.Joint4.Angle, Motor.Joint3.Angle);
 
         //滤波前数据赋值
-        WheelLeg_Kinematics_Assign(&Chassis_Control_Struct->Leg_Right,wheelLeg_kinematics_Struct.Right, Chassis_Control_Struct->Chassis_Dt);
+        WheelLeg_Kinematics_Assign(&Chassis_Control_Struct->Leg_Right,wheelLeg_kinematics_Struct.Right, wheelLeg_kinematics_Struct.Right.Dt);
     }
     // //卡尔曼滤波
     // //位置-速度卡尔曼滤波

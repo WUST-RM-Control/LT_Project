@@ -41,7 +41,6 @@ Chassis_Control_StructTypedef Chassis_Control_Struct =
     .Leg_Right.Leg_LR = Leg_R
 };
 
-
 void Chassis_Task(void const * argument)
 {
 	osDelay(100);
@@ -89,6 +88,18 @@ void Chassis_Task(void const * argument)
         WheelLeg_SpringComp(&Chassis_Control_Struct.Leg_Left, Chassis_Control_Struct.Chassis_Control.Leg_Length_Target - Chassis_Control_Struct.Chassis_Control.Leg_Length_Feebback);
         WheelLeg_SpringComp(&Chassis_Control_Struct.Leg_Right,Chassis_Control_Struct.Chassis_Control.Leg_Length_Target - Chassis_Control_Struct.Chassis_Control.Leg_Length_Feebback);
 
+		// if(RoboControl_Struct.If_SettingZero)
+		// {
+		// 	Motor_DM_CMD_SetZero(&Chassis_JointMotor1_CAN,Chassis_JointMotor1_Send_CAN_ID);
+		// 	Motor_DM_CMD_SetZero(&Chassis_JointMotor2_CAN,Chassis_JointMotor2_Send_CAN_ID);
+		// 	osDelay(1);
+		// 	Motor_DM_CMD_SetZero(&Chassis_JointMotor3_CAN,Chassis_JointMotor3_Send_CAN_ID);
+		// 	Motor_DM_CMD_SetZero(&Chassis_JointMotor4_CAN,Chassis_JointMotor4_Send_CAN_ID);
+		// 	osDelay(100);	//延时100ms防止设完零点进入运动控制疯车
+		// 	Buzzer_Set_SoundEffect(Buzzer_SoundEffect_SetZero_Done);
+			
+		// 	RoboControl_Struct.If_SettingZero = 0;
+		// }
         /*===| 输出 |===*/
         WheelLeg_Output(&Chassis_Control_Struct);
 

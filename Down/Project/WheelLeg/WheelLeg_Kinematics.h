@@ -16,6 +16,10 @@ typedef struct
     /*===| 雅可比力矩阵 |===*/
 	float Jt[2][2];
 
+//Dt
+    float Dt;
+    uint32_t Dt_Count;
+
 } WheelLeg_LegKinematics_StructTypedef;
 
 //左右腿运动学

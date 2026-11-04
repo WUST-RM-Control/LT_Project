@@ -6,7 +6,7 @@
 #include "WheelLeg_Chassis.h"
 //Chassis_Smooth_Restand_Fun翻倒自起函数相关宏定义
 #define Chassis_Recover_Angle_Speed 			125.0f		//翻倒回正摆角速度(°/s)
-#define Chassis_RESET_Slow_Frist_Angle_Speed 	125.0f		//缓倒地自起只动摆角时速度(°/s)
+#define Chassis_RESET_Slow_Frist_Angle_Speed 	200.0f		//缓倒地自起只动摆角时速度(°/s)
 //保持比例180:1(收腿的前中段恰好不碰地，后段碰地)
 #define Chassis_RESET_Slow_Second_Angle_Speed 	90.0f		//缓倒地自起收腿时摆角速度(°/s)
 #define Chassis_RESET_Slow_Second_Link_Speed 	0.5f		//缓倒地自起收腿时腿长速度(m/s)
@@ -237,6 +237,8 @@ int8_t Chassis_Smooth_Restand_Fun(Chassis_Control_StructTypedef *Chassis_Control
 			if(Chassis_Recover_Angle_Stop_Error_Tim>1.0f)
 			{
 				Angle_Speed = -Angle_Speed;
+                Chassis_Control->Leg_Left.Total_Angle_Target = Chassis_Control->Leg_Left.Total_Angle_Feedback;
+                Chassis_Control->Leg_Right.Total_Angle_Target = Chassis_Control->Leg_Right.Total_Angle_Feedback;
 				Chassis_Recover_Angle_Stop_Error_Tim = 0.0f;
 			}
 		}

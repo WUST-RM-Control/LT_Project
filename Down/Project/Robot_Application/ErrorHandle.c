@@ -157,7 +157,7 @@ void ErrorHandle_Task(void *argument)
 		if(Motor.Wheel_Motor2.Ticker >= 100) Motor.Wheel_Motor2.If_Online = 0; 
 		if(Motor.Wheel_Motor2.Ticker >  110) Motor.Wheel_Motor2.Ticker = 100;
 		
-        if(Motor.Wheel_Motor1.If_Online == 0 && Motor.Wheel_Motor2.If_Online == 0)
+        if(Motor.Wheel_Motor1.If_Online == 0 || Motor.Wheel_Motor2.If_Online == 0)
         {
             Robo_Stop();
         }
