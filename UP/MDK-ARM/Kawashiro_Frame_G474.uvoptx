@@ -180,6 +180,16 @@
           <WinNumber>1</WinNumber>
           <ItemText>Remote_Control_Struct</ItemText>
         </Ww>
+        <Ww>
+          <count>5</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>Motor</ItemText>
+        </Ww>
+        <Ww>
+          <count>6</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>RoboControl_Struct</ItemText>
+        </Ww>
       </WatchWindow1>
       <WatchWindow2>
         <Ww>

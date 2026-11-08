@@ -7,7 +7,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2024 STMicroelectronics.
+  * Copyright (c) 2026 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -27,42 +27,39 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32g4xx_hal.h"
+#include "stm32h7xx_hal.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "arm_math.h"
-#include "stdio.h"
-#include "string.h"
-#include "stdint.h"
-#include "stdarg.h"
-
 #include "cmsis_os.h"
 #include "adc.h"
-#include "crc.h"
-#include "dac.h"
 #include "dma.h"
 #include "fdcan.h"
 #include "i2c.h"
-#include "opamp.h"
+#include "octospi.h"
 #include "spi.h"
 #include "tim.h"
 #include "usart.h"
 #include "usb_device.h"
 #include "gpio.h"
 
+#include "arm_math.h"
+#include "stdio.h"
+#include "string.h"
+#include "stdint.h"
+#include "stdarg.h"
+
 #include "define.h"
+#include "VOFA.h"
 #include "PID.h"
 #include "CAN_Driver.h"
 #include "USART_Driver.h"
 #include "USB_Driver.h"
 #include "Function.h"
 #include "DWT.h"
-#include "Buzzer.h"
 #include "crc8_crc16.h"
 #include "Motor_Driver.h"
 #include "flash.h"
-#include "Vofa.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -88,24 +85,30 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define IMU_CS_ACC_Pin GPIO_PIN_3
-#define IMU_CS_ACC_GPIO_Port GPIOE
-#define IMU_CS_GYRO_Pin GPIO_PIN_4
-#define IMU_CS_GYRO_GPIO_Port GPIOE
-#define IMU_INT_ACC_Pin GPIO_PIN_13
-#define IMU_INT_ACC_GPIO_Port GPIOC
-#define IMU_INT_GYRO_Pin GPIO_PIN_14
-#define IMU_INT_GYRO_GPIO_Port GPIOC
-#define Bat_ADC_Pin GPIO_PIN_7
-#define Bat_ADC_GPIO_Port GPIOE
-#define SPI2_CE_Pin GPIO_PIN_8
-#define SPI2_CE_GPIO_Port GPIOD
-#define K_L_Pin GPIO_PIN_4
-#define K_L_GPIO_Port GPIOD
-#define K_P_Pin GPIO_PIN_5
-#define K_P_GPIO_Port GPIOD
-#define K_R_Pin GPIO_PIN_6
-#define K_R_GPIO_Port GPIOD
+#define POWER_24V_2_Pin GPIO_PIN_13
+#define POWER_24V_2_GPIO_Port GPIOC
+#define POWER_24V_1_Pin GPIO_PIN_14
+#define POWER_24V_1_GPIO_Port GPIOC
+#define POWER_5V_Pin GPIO_PIN_15
+#define POWER_5V_GPIO_Port GPIOC
+#define ACC_CS_Pin GPIO_PIN_0
+#define ACC_CS_GPIO_Port GPIOC
+#define GYRO_CS_Pin GPIO_PIN_3
+#define GYRO_CS_GPIO_Port GPIOC
+#define ACC_INT_Pin GPIO_PIN_10
+#define ACC_INT_GPIO_Port GPIOE
+#define GYRO_INT_Pin GPIO_PIN_12
+#define GYRO_INT_GPIO_Port GPIOE
+#define LCD_CS_Pin GPIO_PIN_15
+#define LCD_CS_GPIO_Port GPIOE
+#define LCD_BLK_Pin GPIO_PIN_10
+#define LCD_BLK_GPIO_Port GPIOB
+#define LCD_RES_Pin GPIO_PIN_11
+#define LCD_RES_GPIO_Port GPIOB
+#define LCD_DC_Pin GPIO_PIN_10
+#define LCD_DC_GPIO_Port GPIOD
+#define USER_Key_Pin GPIO_PIN_15
+#define USER_Key_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
 

@@ -71,8 +71,8 @@ void Gimbal_Task(void *argument)
         
         /*===| 得到Yaw与底盘正方向的偏移角度[-180 ~ +180度] |===*/
         Gimbal_Control_Struct.Yaw_Err = Motor.Yaw.Angle - Gimbal_Median_Yaw;
-        if(Gimbal_Control_Struct.Yaw_Err >= 180) Gimbal_Control_Struct.Yaw_Err = 360 - Gimbal_Control_Struct.Yaw_Err;
-        if(Gimbal_Control_Struct.Yaw_Err <= -180) Gimbal_Control_Struct.Yaw_Err = 360 + Gimbal_Control_Struct.Yaw_Err;
+        if(Gimbal_Control_Struct.Yaw_Err >= 180) Gimbal_Control_Struct.Yaw_Err = Gimbal_Control_Struct.Yaw_Err-360;
+        if(Gimbal_Control_Struct.Yaw_Err <= -180) Gimbal_Control_Struct.Yaw_Err = Gimbal_Control_Struct.Yaw_Err+360;
         RoboControl_Struct.Yaw_Err = Gimbal_Control_Struct.Yaw_Err;	
         
         /*===| 得到自瞄位置与当前位置的偏移角度[-180 ~ +180度] |===*/

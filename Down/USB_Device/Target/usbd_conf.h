@@ -2,12 +2,12 @@
 /**
   ******************************************************************************
   * @file           : usbd_conf.h
-  * @version        : v3.0_Cube
+  * @version        : v1.0_Cube
   * @brief          : Header for usbd_conf.c file.
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2024 STMicroelectronics.
+  * Copyright (c) 2026 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -30,8 +30,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "stm32g4xx.h"
-#include "stm32g4xx_hal.h"
+#include "main.h"
+#include "stm32h7xx.h"
+#include "stm32h7xx_hal.h"
 
 /* USER CODE BEGIN INCLUDE */
 
@@ -52,9 +53,6 @@
   * @{
   */
 
-/* Private variables ---------------------------------------------------------*/
-/* USER CODE BEGIN PV */
-/* USER CODE END PV */
 /**
   * @}
   */
@@ -80,6 +78,7 @@
 /****************************************/
 /* #define for FS and HS identification */
 #define DEVICE_FS 		0
+#define DEVICE_HS 		1
 
 /**
   * @}
@@ -89,10 +88,9 @@
   * @brief Aliases.
   * @{
   */
-
-/* Memory management macros */
-
+/* Memory management macros make sure to use static memory allocation */
 /** Alias for memory allocation. */
+
 #define USBD_malloc         (void *)USBD_static_malloc
 
 /** Alias for memory release. */
@@ -114,24 +112,24 @@
                             printf("\n");
 #else
 #define USBD_UsrLog(...)
-#endif
+#endif /* (USBD_DEBUG_LEVEL > 0U) */
 
 #if (USBD_DEBUG_LEVEL > 1)
 
-#define USBD_ErrLog(...)    printf("ERROR: ") ;\
+#define USBD_ErrLog(...)    printf("ERROR: ");\
                             printf(__VA_ARGS__);\
                             printf("\n");
 #else
 #define USBD_ErrLog(...)
-#endif
+#endif /* (USBD_DEBUG_LEVEL > 1U) */
 
 #if (USBD_DEBUG_LEVEL > 2)
-#define USBD_DbgLog(...)    printf("DEBUG : ") ;\
+#define USBD_DbgLog(...)    printf("DEBUG : ");\
                             printf(__VA_ARGS__);\
                             printf("\n");
 #else
 #define USBD_DbgLog(...)
-#endif
+#endif /* (USBD_DEBUG_LEVEL > 2U) */
 
 /**
   * @}

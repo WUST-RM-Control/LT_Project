@@ -16,7 +16,7 @@ Shoot_Control_StructTypeDef Shoot_Control_Struct;
 float Shoot_Fric_First_Left_Speed    = 20.5f;
 float Shoot_Fric_First_Right_Speed   = 20.5f;
 
-#define Shoot_Frequency_Max 23
+#define Shoot_Frequency_Max 20
 
 float Vir_Heat;
 float Shoot_Dt;

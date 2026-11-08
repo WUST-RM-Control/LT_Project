@@ -257,6 +257,9 @@ void RemoteControl_Float(void)
 
 void RemoteControl_Bool(void)
 {
+	static uint32_t Remote_DWT_Count;
+    float Dt = DWT_GetDeltaT(&Remote_DWT_Count);
+    if(Dt>1.0f) Dt=0;
     /*===| 侧滑轮往上进入自定义功能选项1，往下是选项2，取消摇杆控制移动，通过摇杆选择触发一次定义的八个功能 |===*/ 
 	if(Remote_Control_Struct.RC_Side > 0.7f && Remote_Control_Struct.S1 != SW_Down)
 	{
@@ -398,6 +401,7 @@ void RemoteControl_Bool(void)
 	/*===| 按下开火键单发,长按连发 |===*/
     if(RoboControl_Struct.Shoot_State != Shoot_State_Off)
 	{
+        static float Tim_Shoot_sum = 0;
         /*===| 侧滑轮往下拨一次单发 |===*/
         if( Remote_Control_Struct.RC_Side < -0.1f && Remote_Control_Last_Struct.RC_Side > -0.1f)
         {
@@ -411,10 +415,24 @@ void RemoteControl_Bool(void)
             {
                 RoboControl_Struct.Shoot_State = Shoot_State_Ready;
             }
+            Tim_Shoot_sum = 0;
+        }
+        else if(Remote_Control_Struct.RC_Side < -0.7f && Remote_Control_Last_Struct.RC_Side < -0.7f)
+        {
+            
+            if(Tim_Shoot_sum>1.0f)
+            {
+                RoboControl_Struct.Shoot_State = Shoot_State_Continue;
+            }
+            else
+            {
+                Tim_Shoot_sum += Dt;
+            }
         }
         else
         {
             RoboControl_Struct.Shoot_State = Shoot_State_Ready;
+            Tim_Shoot_sum = 0;
         }
 	}
 	

@@ -115,7 +115,7 @@
         
 /*===| 云台相关参数定义 |===*/  
 //    #define Gimbal_Median_Yaw                  -105.292969       //云台朝前时Yaw电机的编码值
-    #define Gimbal_Median_Yaw                   63.32f      //云台朝前时Yaw电机的编码值
+    #define Gimbal_Median_Yaw                   -50.7568359f      //云台朝前时Yaw电机的编码值
 	#define Gimbal_Median_Pitch                 0        //云台水平时Pitch电机的角度
 
     #define Gimbal_Pitch_Limit_Up               90.0f
@@ -131,8 +131,8 @@
 	#define Trigger_Bullet_Num 					 9.0f
 
 /*==| 电机Pitch绝对角度限位 |==*/
-#define Pitch_Angle_Limit_Max -40
-#define Pitch_Angle_Limit_Min 7
+#define Pitch_Angle_Limit_Max -100
+#define Pitch_Angle_Limit_Min -55
 
 #define Radain2Angle					   57.29578f
  
