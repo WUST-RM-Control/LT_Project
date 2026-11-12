@@ -61,8 +61,8 @@
     #define Gimbal_Pitch_Feedback_CAN_ID        0x205    //Pitch_CAN反馈ID
     
     #define Gimbal_Yaw_CAN                      hfdcan3    //Yaw_使用的CAN
-    #define Gimbal_Yaw_Send_CAN_ID              0x1FF    //Yaw_CAN发送ID
-    #define Gimbal_Yaw_Feedback_CAN_ID          0x206    //Yaw_CAN反馈ID
+    #define Gimbal_Yaw_Send_CAN_ID              0x05    //Yaw_CAN发送ID
+    #define Gimbal_Yaw_Feedback_CAN_ID          0x105    //Yaw_CAN反馈ID
 
 /*===| 发射电机通信相关定义 |===*/
     #define Shoot_Fric_First_CAN                      hfdcan1    //Fric_使用的CAN
@@ -115,7 +115,7 @@
         
 /*===| 云台相关参数定义 |===*/  
 //    #define Gimbal_Median_Yaw                  -105.292969       //云台朝前时Yaw电机的编码值
-    #define Gimbal_Median_Yaw                   -50.7568359f      //云台朝前时Yaw电机的编码值
+    #define Gimbal_Median_Yaw                   -173.995865f      //云台朝前时Yaw电机的编码值
 	#define Gimbal_Median_Pitch                 0        //云台水平时Pitch电机的角度
 
     #define Gimbal_Pitch_Limit_Up               90.0f

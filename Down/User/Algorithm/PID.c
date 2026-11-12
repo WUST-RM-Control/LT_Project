@@ -24,8 +24,8 @@ void PID_Position_Calculate(PID_Struct_TypeDef *PID_Struct, float Target, float 
     PID_Struct->Target = Target;
     PID_Struct->Feedback = Feedback;
     
-        /*===| 计算误差 |===*/
-        PID_Struct->Error = PID_Struct->Target - PID_Struct->Feedback;
+    /*===| 计算误差 |===*/
+    PID_Struct->Error = PID_Struct->Target - PID_Struct->Feedback;
     
     /*===| 计算各部分输出 |===*/
     PID_Struct->K_Output =  PID_Struct->Kp * PID_Struct->Error;
@@ -33,16 +33,16 @@ void PID_Position_Calculate(PID_Struct_TypeDef *PID_Struct, float Target, float 
     PID_Struct->D_Output =  PID_Struct->Kd * (PID_Struct->Error - PID_Struct->Error_Last);
     PID_Struct->F_Output =  PID_Struct->Kf * PID_Struct->Target;
     
-        /*===| 积分输出限幅 |===*/
-        if      (PID_Struct->I_Output >=  PID_Struct->I_Output_Max)        PID_Struct->I_Output =  PID_Struct->I_Output_Max;
-        else if (PID_Struct->I_Output <= -PID_Struct->I_Output_Max)        PID_Struct->I_Output = -PID_Struct->I_Output_Max;
-    
-        /*===| 计算总输出 |===*/
-        PID_Struct->Output = PID_Struct->K_Output + PID_Struct->I_Output + PID_Struct->D_Output + PID_Struct->F_Output;
+    /*===| 积分输出限幅 |===*/
+    if      (PID_Struct->I_Output >=  PID_Struct->I_Output_Max)        PID_Struct->I_Output =  PID_Struct->I_Output_Max;
+    else if (PID_Struct->I_Output <= -PID_Struct->I_Output_Max)        PID_Struct->I_Output = -PID_Struct->I_Output_Max;
+
+    /*===| 计算总输出 |===*/
+    PID_Struct->Output = PID_Struct->K_Output + PID_Struct->I_Output + PID_Struct->D_Output + PID_Struct->F_Output;
     
     /*===| 输出限幅 |===*/
-        if      (PID_Struct->Output >=  PID_Struct->Output_Max) PID_Struct->Output =  PID_Struct->Output_Max;
-        else if (PID_Struct->Output <= -PID_Struct->Output_Max) PID_Struct->Output = -PID_Struct->Output_Max;
+    if      (PID_Struct->Output >=  PID_Struct->Output_Max) PID_Struct->Output =  PID_Struct->Output_Max;
+    else if (PID_Struct->Output <= -PID_Struct->Output_Max) PID_Struct->Output = -PID_Struct->Output_Max;
         
     /*===| 记录误差和输出 |===*/
         PID_Struct->Error_Last = PID_Struct->Error;

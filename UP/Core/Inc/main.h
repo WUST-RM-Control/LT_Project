@@ -52,6 +52,7 @@ extern "C" {
 #include "gpio.h"
 
 #include "define.h"
+#include "Vofa.h"
 #include "PID.h"
 #include "CAN_Driver.h"
 #include "USART_Driver.h"

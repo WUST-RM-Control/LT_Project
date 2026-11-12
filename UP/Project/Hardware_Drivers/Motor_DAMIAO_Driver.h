@@ -12,8 +12,8 @@
 #define KP_MAX  500  
 #define KD_MIN  0    
 #define KD_MAX  5    
-#define T_MIN   -5
-#define T_MAX   5  
+#define T_MIN   -16384
+#define T_MAX   16384  
 
 
 void Motor_DM_CMD_Enable(FDCAN_HandleTypeDef* hfdcan, uint16_t CAN_ID);

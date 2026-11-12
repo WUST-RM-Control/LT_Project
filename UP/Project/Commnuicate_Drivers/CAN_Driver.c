@@ -37,7 +37,7 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
     
         /*===| 云台电机数据 |===*/
         if      (hfdcan == &Gimbal_Pitch_CAN    && CAN_RX_ID == Gimbal_Pitch_Feedback_CAN_ID)       Motor_DJI_Storage_Data(CAN_RX_Data1, &Motor.Pitch);
-        else if (hfdcan == &Gimbal_Yaw_CAN      && CAN_RX_ID == Gimbal_Yaw_Feedback_CAN_ID)         Motor_DJI_Storage_Data(CAN_RX_Data1, &Motor.Yaw);
+        else if (hfdcan == &Gimbal_Yaw_CAN      && CAN_RX_ID == Gimbal_Yaw_Feedback_CAN_ID)         Motor_DM_Storage_Data(CAN_RX_Data1, &Motor.Yaw);
         
         /*===| 发射机构电机数据 |===*/
         else if (hfdcan == &Shoot_Trigger_CAN     && CAN_RX_ID == Shoot_Trigger_Feedback_CAN_ID)      Motor_DJI_Storage_Data(CAN_RX_Data1, &Motor.Trigger);

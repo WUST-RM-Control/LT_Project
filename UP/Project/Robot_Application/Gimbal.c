@@ -22,21 +22,24 @@ void Gimbal_Task(void *argument)
     /*===| 云台PID参数初始化 |===*/
 	
 	/*===| 正常模式下 |===*/
-	PID_Init(&Gimbal_Control_Struct.Pitch_Angle_PID_Struct, 	10,  0, 200,  0,  0,    100);
-    PID_Init(&Gimbal_Control_Struct.Pitch_Speed_PID_Struct, 	200, 3, 0,    300,  500, 25000);	
+	PID_Init(&Gimbal_Control_Struct.Pitch_Angle_PID_Struct, 	25,  0, 100,  0,  0,    200);
+    PID_Init(&Gimbal_Control_Struct.Pitch_Speed_PID_Struct, 	100, 3, 0,    250,  2000, 25000);	
 	
-	//没锁yaw轴
-	PID_Init(&Gimbal_Control_Struct.Yaw_Angle_PID_Struct,   	25,  0, 30,  0,  0,    600);
-	PID_Init(&Gimbal_Control_Struct.Yaw_Speed_PID_Struct,   	350, 1, 0,    650, 2000, 25000);
+	//yaw轴
+    PID_Init(&Gimbal_Control_Struct.Yaw_Angle_PID_Struct,   20,   0,    750,   0,    0,   600);
+    PID_Init(&Gimbal_Control_Struct.Yaw_Speed_PID_Struct,   25,   1,  0,  80 , 1500, 16384);
+	// //没锁yaw轴
+    // PID_Init(&Gimbal_Control_Struct.Yaw_Angle_PID_Struct,   60,   0,   1700,   0,    0,   700);
+    // PID_Init(&Gimbal_Control_Struct.Yaw_Speed_PID_Struct,   20,   0,  0,  60 , 0, 16384);
 
-	//锁yaw轴
-	PID_Init(&Gimbal_Control_Struct.Yaw_Angle_Lock_PID_Struct,   5,  0, 50,  0,  0,    50);
-    PID_Init(&Gimbal_Control_Struct.Yaw_Speed_Lock_PID_Struct,   500,  1, 0,   100, 1500, 25000);
-
+	// //锁yaw轴
+    // PID_Init(&Gimbal_Control_Struct.Yaw_Angle_PID_Struct,   60,   0,   1700,   0,    0,   700);
+    // PID_Init(&Gimbal_Control_Struct.Yaw_Speed_PID_Struct,   20,   0,  0,  60 , 0, 16384);
 	
-	/*===| 电机补偿校准 |===*/
+//	/*===| 电机补偿校准 |===*/
+//    osDelay(1000);
 //    Motor_Compensation_Task();	
-    
+//    
 //    FLASH_ErasePage(100);
 //    FLASH_ErasePage(101);
 //    FLASH_ErasePage(102);
@@ -46,10 +49,10 @@ void Gimbal_Task(void *argument)
 //        FLASH_programword(0x08000000 + 2048*(100+128) + 8*i, ((uint64_t *)(Config.Motor_Yaw_Cal_Data))[i]);
 //    }
 
-    for(uint16_t i = 0; i<1024; i++)
-    {
-        memcpy(&((uint64_t *)(Config.Motor_Yaw_Cal_Data))[i], (uint32_t *)(0x08000000 + 2048*(100+128) + 8*i), 8);
-    }
+    // for(uint16_t i = 0; i<1024; i++)
+    // {
+    //     memcpy(&((uint64_t *)(Config.Motor_Yaw_Cal_Data))[i], (uint32_t *)(0x08000000 + 2048*(100+128) + 8*i), 8);
+    // }
  
 //    FLASH_ErasePage(104);
 //    FLASH_ErasePage(105);
@@ -60,19 +63,17 @@ void Gimbal_Task(void *argument)
 //        FLASH_programword(0x08000000 + 2048*(104+128) + 8*i, ((uint64_t *)(Config.Motor_Pitch_Cal_Data))[i]);
 //    }
 	
-    for(uint16_t i = 0; i<1024; i++)
-    {
-        memcpy(&((uint64_t *)(Config.Motor_Pitch_Cal_Data))[i], (uint32_t *)(0x08000000 + 2048*(104+128) + 8*i), 8);
-    }
+    // for(uint16_t i = 0; i<1024; i++)
+    // {
+    //     memcpy(&((uint64_t *)(Config.Motor_Pitch_Cal_Data))[i], (uint32_t *)(0x08000000 + 2048*(104+128) + 8*i), 8);
+    // }
     
     for(;;)
     {
         Gimbal_Control_Struct.Gimbal_State = RoboControl_Struct.Gimbal_State;
         
         /*===| 得到Yaw与底盘正方向的偏移角度[-180 ~ +180度] |===*/
-        Gimbal_Control_Struct.Yaw_Err = Motor.Yaw.Angle - Gimbal_Median_Yaw;
-        if(Gimbal_Control_Struct.Yaw_Err >= 180) Gimbal_Control_Struct.Yaw_Err = Gimbal_Control_Struct.Yaw_Err-360;
-        if(Gimbal_Control_Struct.Yaw_Err <= -180) Gimbal_Control_Struct.Yaw_Err = Gimbal_Control_Struct.Yaw_Err+360;
+        Gimbal_Control_Struct.Yaw_Err = Caculate_Included_Angle(Motor.Yaw.Total_Angle, Gimbal_Median_Yaw);
         RoboControl_Struct.Yaw_Err = Gimbal_Control_Struct.Yaw_Err;	
         
         /*===| 得到自瞄位置与当前位置的偏移角度[-180 ~ +180度] |===*/
@@ -97,7 +98,6 @@ void Gimbal_Task(void *argument)
         /*===| 串级PID串级计算得到Yaw电机的电流大小 |===*/
 		Gimbal_Control_Struct.Pitch_Speed_PID_Struct.Output    = 0;
 		Gimbal_Control_Struct.Yaw_Speed_PID_Struct.Output      = 0;
-		Gimbal_Control_Struct.Yaw_Speed_Lock_PID_Struct.Output = 0;
 		/*===| 正常模式下 |===*/
 		if(RoboControl_Struct.Recover_from_ground_Flag == 0) 
 		{
@@ -109,45 +109,58 @@ void Gimbal_Task(void *argument)
 		{
             float BestErr = Caculate_Included_Angle(Gimbal_Median_Yaw, Motor.Yaw.Total_Angle);
             if(fabsf(BestErr) > 90) BestErr = Caculate_Included_Angle(Gimbal_Median_Yaw+180, Motor.Yaw.Total_Angle);
-			PID_Position_Calculate(&Gimbal_Control_Struct.Yaw_Angle_Lock_PID_Struct, 0,  -BestErr);
-			PID_Position_Calculate(&Gimbal_Control_Struct.Yaw_Speed_Lock_PID_Struct, Gimbal_Control_Struct.Yaw_Angle_Lock_PID_Struct.Output, -Motor.Yaw.Total_Angle_Speed_RPM);
+			PID_Position_Calculate(&Gimbal_Control_Struct.Yaw_Angle_PID_Struct, 0,  BestErr);
+			PID_Position_Calculate(&Gimbal_Control_Struct.Yaw_Speed_PID_Struct, Gimbal_Control_Struct.Yaw_Angle_PID_Struct.Output, Motor.Yaw.Total_Angle_Speed_RPM);
             RoboControl_Struct.Robo_Target_Gimbal_Yaw = INS_Data_Internal.YawTotalAngle;
         }
                                                                                                                 		
         /*===| 串级PID串级计算得到Pitch电机的电流大小 |===*/
         PID_Position_Calculate(&Gimbal_Control_Struct.Pitch_Angle_PID_Struct, Gimbal_Control_Struct.Pitch_Target,                  		Gimbal_Control_Struct.Pitch_Feedback);
-        PID_Position_Calculate(&Gimbal_Control_Struct.Pitch_Speed_PID_Struct, Gimbal_Control_Struct.Pitch_Angle_PID_Struct.Output, 		INS_Data_Internal.Gyro[1]*PI_to_Degree/6.0f);
+        PID_Position_Calculate(&Gimbal_Control_Struct.Pitch_Speed_PID_Struct, Gimbal_Control_Struct.Pitch_Angle_PID_Struct.Output, 		INS_Data_Internal.Gyro[1]*PI_to_Degree);
         
-        /*===| 限幅 |===*/		//-25000 ~ 25000是最大范围，若还出现问题则缩小范围
-        Gimbal_Control_Struct.Pitch_Speed_PID_Struct.Output    = Motor_Compensation_Get_Data(Motor.Pitch.Angle, Motor.Pitch.Total_Angle_Speed_RPM, &Pitch_Compensation_Config)+ RoboControl_Struct.Smooth_Start_K*-Gimbal_Control_Struct.Pitch_Speed_PID_Struct.Output;
-        Gimbal_Control_Struct.Yaw_Speed_PID_Struct.Output      = Motor_Compensation_Get_Data(Motor.Yaw.Total_Angle, Motor.Yaw.Total_Angle_Speed_RPM, &Yaw_Compensation_Config) - RoboControl_Struct.Smooth_Start_K*Gimbal_Control_Struct.Yaw_Speed_PID_Struct.Output;
-        Gimbal_Control_Struct.Yaw_Speed_Lock_PID_Struct.Output = Motor_Compensation_Get_Data(Motor.Yaw.Total_Angle, Motor.Yaw.Total_Angle_Speed_RPM, &Yaw_Compensation_Config) - RoboControl_Struct.Smooth_Start_K*Gimbal_Control_Struct.Yaw_Speed_Lock_PID_Struct.Output;
-//        Gimbal_Control_Struct.Yaw_Speed_PID_Struct.Output      =  - RoboControl_Struct.Smooth_Start_K*Gimbal_Control_Struct.Yaw_Speed_PID_Struct.Output;
-//        Gimbal_Control_Struct.Yaw_Speed_Lock_PID_Struct.Output =  - RoboControl_Struct.Smooth_Start_K*Gimbal_Control_Struct.Yaw_Speed_Lock_PID_Struct.Output;
-        Limit_float(&Gimbal_Control_Struct.Pitch_Speed_PID_Struct.Output    ,25000,-25000);
-        Limit_float(&Gimbal_Control_Struct.Yaw_Speed_PID_Struct.Output      ,25000,-25000);
-        Limit_float(&Gimbal_Control_Struct.Yaw_Speed_Lock_PID_Struct.Output ,25000,-25000);
+        /*===| 限幅 |===*/
+		static float Yaw_Output_ = 0;
+//        float Yaw_Output = Motor_Compensation_Get_Data(Motor.Yaw.Total_Angle, Motor.Yaw.Total_Angle_Speed_RPM, &Yaw_Compensation_Config) + RoboControl_Struct.Smooth_Start_K*Gimbal_Control_Struct.Yaw_Speed_PID_Struct.Output;
+        float Yaw_Output = RoboControl_Struct.Smooth_Start_K*Gimbal_Control_Struct.Yaw_Speed_PID_Struct.Output;
+        float Pitch_Output = -RoboControl_Struct.Smooth_Start_K*Gimbal_Control_Struct.Pitch_Speed_PID_Struct.Output;
+    //    Gimbal_Control_Struct.Pitch_Speed_PID_Struct.Output    = Motor_Compensation_Get_Data(Motor.Pitch.Angle, Motor.Pitch.Total_Angle_Speed_RPM, &Pitch_Compensation_Config)+ RoboControl_Struct.Smooth_Start_K*-Gimbal_Control_Struct.Pitch_Speed_PID_Struct.Output;
+    //    Gimbal_Control_Struct.Yaw_Speed_PID_Struct.Output      = Motor_Compensation_Get_Data(Motor.Yaw.Total_Angle, Motor.Yaw.Total_Angle_Speed_RPM, &Yaw_Compensation_Config) - RoboControl_Struct.Smooth_Start_K*Gimbal_Control_Struct.Yaw_Speed_PID_Struct.Output;
+    //    Gimbal_Control_Struct.Yaw_Speed_Lock_PID_Struct.Output = Motor_Compensation_Get_Data(Motor.Yaw.Total_Angle, Motor.Yaw.Total_Angle_Speed_RPM, &Yaw_Compensation_Config) - RoboControl_Struct.Smooth_Start_K*Gimbal_Control_Struct.Yaw_Speed_Lock_PID_Struct.Output;
+    //    Gimbal_Control_Struct.Yaw_Speed_PID_Struct.Output      =  - RoboControl_Struct.Smooth_Start_K*Gimbal_Control_Struct.Yaw_Speed_PID_Struct.Output;
+    //    Gimbal_Control_Struct.Yaw_Speed_Lock_PID_Struct.Output =  - RoboControl_Struct.Smooth_Start_K*Gimbal_Control_Struct.Yaw_Speed_Lock_PID_Struct.Output;
+       Limit_float(&Yaw_Output  ,16384,-16384);
+       Limit_float(&Pitch_Output,25000,-25000);
+       VOFA_JustFloat_AddValue(0,Gimbal_Control_Struct.Yaw_Angle_PID_Struct.Feedback);
+       VOFA_JustFloat_AddValue(1,Gimbal_Control_Struct.Yaw_Angle_PID_Struct.Target);
+       VOFA_JustFloat_AddValue(2,Gimbal_Control_Struct.Yaw_Angle_PID_Struct.Output);
+       VOFA_JustFloat_AddValue(3,Gimbal_Control_Struct.Yaw_Speed_PID_Struct.Feedback);
+       VOFA_JustFloat_AddValue(4,Gimbal_Control_Struct.Yaw_Speed_PID_Struct.Target);
+       VOFA_JustFloat_AddValue(5,Gimbal_Control_Struct.Yaw_Speed_PID_Struct.Output);
+       VOFA_JustFloat_AddValue(6,Gimbal_Control_Struct.Pitch_Angle_PID_Struct.Feedback);
+       VOFA_JustFloat_AddValue(7,Gimbal_Control_Struct.Pitch_Angle_PID_Struct.Target);
+       VOFA_JustFloat_AddValue(8,Gimbal_Control_Struct.Pitch_Angle_PID_Struct.Output);
+       VOFA_JustFloat_AddValue(9,Gimbal_Control_Struct.Pitch_Speed_PID_Struct.Feedback);
+       VOFA_JustFloat_AddValue(10,Gimbal_Control_Struct.Pitch_Speed_PID_Struct.Target);
+       VOFA_JustFloat_AddValue(11,Gimbal_Control_Struct.Pitch_Speed_PID_Struct.Output);
+       VOFA_JustFloat_AddValue(12,INS_Data_Internal.Roll);
+       VOFA_JustFloat_AddValue(13,INS_Data_Internal.Pitch);
+       VOFA_JustFloat_AddValue(14,INS_Data_Internal.Yaw);
+//       VOFA_JustFloat_AddValue(15,INS_Data_Internal.Pitch_Speed);
+       VOFA_JustFloat_AddValue(16,INS_Data_Internal.Gyro[0]*PI_to_Degree);
+       VOFA_JustFloat_AddValue(17,INS_Data_Internal.Gyro[1]*PI_to_Degree);
+       VOFA_JustFloat_AddValue(18,INS_Data_Internal.Gyro[2]*PI_to_Degree);
+    //    Limit_float(&Gimbal_Control_Struct.Yaw_Speed_Lock_PID_Struct.Output ,25000,-25000);
         
         /*===| 发送电压参数 |===*/
         if(RoboControl_Struct.Robo_Enable && INS_Data_Internal.If_INS_Init) 
         {
-			Motor_DJI_SendCurrent(&Gimbal_Pitch_CAN,Gimbal_Pitch_Send_CAN_ID,Gimbal_Control_Struct.Pitch_Speed_PID_Struct.Output,0,0,0);		
-			
-			/*===| Yaw正常模式下 |===*/
-			if(RoboControl_Struct.Recover_from_ground_Flag == 0)
-			{
-				Motor_DJI_SendCurrent(&Gimbal_Yaw_CAN, Gimbal_Yaw_Send_CAN_ID,0,Gimbal_Control_Struct.Yaw_Speed_PID_Struct.Output,0,0);		
-			}
-			/*===| 倒地自起下云台yaw轴锁住 |===*/
-			else if(RoboControl_Struct.Recover_from_ground_Flag == 1)
-			{
-                Motor_DJI_SendCurrent(&Gimbal_Yaw_CAN, Gimbal_Yaw_Send_CAN_ID, 0,Gimbal_Control_Struct.Yaw_Speed_Lock_PID_Struct.Output,0,0);									
-			}
+			Motor_DJI_SendCurrent(&Gimbal_Pitch_CAN,Gimbal_Pitch_Send_CAN_ID,Pitch_Output,0,0,0);
+			Motor_DM_CMD_MIT(&Gimbal_Yaw_CAN, Gimbal_Yaw_Send_CAN_ID, 0,0,0,0,Yaw_Output);
         }
         else 
         {
             Motor_DJI_SendCurrent(&Gimbal_Pitch_CAN, Gimbal_Pitch_Send_CAN_ID, 0, 0 ,0 ,0);
-            Motor_DJI_SendCurrent(&Gimbal_Yaw_CAN, Gimbal_Yaw_Send_CAN_ID, 0, 0 ,0 ,0);
+            Motor_DM_CMD_MIT(&Gimbal_Yaw_CAN, Gimbal_Yaw_Send_CAN_ID, 0, 0 ,0 ,0 ,Yaw_Output_);
         }
         osDelay(1);
     }

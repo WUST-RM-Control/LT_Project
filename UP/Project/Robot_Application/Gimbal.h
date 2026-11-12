@@ -70,15 +70,15 @@ typedef struct
     PID_Struct_TypeDef Pitch_Angle_PID_Struct;  //Pitch角度环PID结构体
     PID_Struct_TypeDef Pitch_Speed_PID_Struct;  //Pitch速度环PID结构体
 	
-	/*===| 倒地自起下云台yaw轴锁住 |===*/
-	PID_Struct_TypeDef Yaw_Angle_Lock_PID_Struct;    //Yaw角度环PID结构体
-    PID_Struct_TypeDef Yaw_Speed_Lock_PID_Struct;    //Yaw速度环PID结构体
+	// /*===| 倒地自起下云台yaw轴锁住 |===*/
+	// PID_Struct_TypeDef Yaw_Angle_Lock_PID_Struct;    //Yaw角度环PID结构体
+    // PID_Struct_TypeDef Yaw_Speed_Lock_PID_Struct;    //Yaw速度环PID结构体
 	
 	/*===| 自瞄模式下 |===*/
-	PID_Struct_TypeDef Yaw_Angle_Aim_PID_Struct;    //Yaw角度环PID结构体
-    PID_Struct_TypeDef Yaw_Speed_Aim_PID_Struct;    //Yaw速度环PID结构体
-    PID_Struct_TypeDef Pitch_Angle_Aim_PID_Struct;  //Pitch角度环PID结构体
-    PID_Struct_TypeDef Pitch_Speed_Aim_PID_Struct;  //Pitch速度环PID结构体
+	// PID_Struct_TypeDef Yaw_Angle_Aim_PID_Struct;    //Yaw角度环PID结构体
+    // PID_Struct_TypeDef Yaw_Speed_Aim_PID_Struct;    //Yaw速度环PID结构体
+    // PID_Struct_TypeDef Pitch_Angle_Aim_PID_Struct;  //Pitch角度环PID结构体
+    // PID_Struct_TypeDef Pitch_Speed_Aim_PID_Struct;  //Pitch速度环PID结构体
     
 } Gimbal_Control_StructTypeDef;
 

@@ -188,7 +188,32 @@
         <Ww>
           <count>6</count>
           <WinNumber>1</WinNumber>
+          <ItemText>Gimbal_Control_Struct</ItemText>
+        </Ww>
+        <Ww>
+          <count>7</count>
+          <WinNumber>1</WinNumber>
           <ItemText>RoboControl_Struct</ItemText>
+        </Ww>
+        <Ww>
+          <count>8</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>Yaw_Output</ItemText>
+        </Ww>
+        <Ww>
+          <count>9</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>Yaw_Output_</ItemText>
+        </Ww>
+        <Ww>
+          <count>10</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>Recover_from_ground_Flag</ItemText>
+        </Ww>
+        <Ww>
+          <count>11</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>INS</ItemText>
         </Ww>
       </WatchWindow1>
       <WatchWindow2>

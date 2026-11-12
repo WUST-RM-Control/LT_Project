@@ -13,19 +13,19 @@ WheelLeg_LQR_Displacement_Date Wheel_Right;
 WheelLeg_LQR_StructTypeDef WheelLeg_LQR_Struct;
 
 //三次多项式拟合系数
-static const float Poly_Coefficient[12][4]={
-    {-204.71377921f,	289.63818168f,  -157.59015500f, -4.96782823f},
-	{-7.82854075f,	    19.15680744f,	-17.41989049f,	-0.23003324f},
-	{-7.53928256f,	    12.07032519f,	-6.74694158f,	-0.05542880f},
-	{-13.69695924f,     22.38839045f,	-12.69903703f,	-0.34124181f},
-	{202.15935394f,	    -119.52253547f,	-28.73024512f,	30.05658725f},
-	{8.53035961f,	    0.97505447f,	-8.73026755f,	4.45533442f},
-	{1451.56173722f,	-1146.30857312f,122.25511452f,	96.79758089f},
-	{170.43065142f,	    -127.63122938f,	1.84610137f,	19.79612454f},
-	{55.36361918f,	    -32.73259440f,	-7.86810167f,	8.23133542f},
-	{36.92907744f,	    7.73400354f,	-41.51630122f,	19.92978630f},
-	{825.88702496f,	    -1322.23787701f,739.09041989f,	6.07192070f},
-	{120.04567253f,	    -175.60627295f,	92.90386168f,	-0.44963915f}
+float Poly_Coefficient[12][4]={
+	{-170.23294706,	243.88651499,	-138.65750575,	-5.64993715},
+	{-4.03825101,	13.44905631,	-14.71670050,	-0.38961878},
+	{-5.28440239,	9.33630334,	-5.77930916,	-0.10131365},
+	{-8.78783877,	16.49594591,	-10.58492351,	-0.43396232},
+	{155.82101033,	-99.35407081,	-23.65049160,	29.59911908},
+	{0.68388289,	6.42491696,	-9.66758078,	4.74895183},
+	{1175.43563013,	-984.38765439,	123.68442473,	95.01680309},
+	{124.01496880,	-100.08053803,	2.59268990,	19.58033705},
+	{42.67334115,	-27.20923288,	-6.47695387,	8.10605260},
+	{11.39397746,	18.56617754,	-38.39411366,	19.54654773},
+	{578.87727866,	-1022.74078857,	633.09159866,	11.09835473},
+	{106.65892585,	-157.58424152,	87.25965976,	-0.30452968}
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -240,6 +240,20 @@ static void WheelLeg_LQR_calculation(Chassis_Leg_StructTypedef *Leg_Date, const 
 		xb_d  = -WheelLeg_LQR_Struct.State[4];
 		phi   = -WheelLeg_LQR_Struct.State[5];
 		phi_d = -WheelLeg_LQR_Struct.State[6];
+		// VOFA_JustFloat_AddValue(4,theta);
+		// VOFA_JustFloat_AddValue(5,theta_d);
+		// VOFA_JustFloat_AddValue(6,xb);
+		// VOFA_JustFloat_AddValue(7,xb_d);
+		// VOFA_JustFloat_AddValue(8,phi);
+		// VOFA_JustFloat_AddValue(9,phi_d);
+		// VOFA_JustFloat_AddValue(10,LQR_K_LR[0] * theta);
+		// VOFA_JustFloat_AddValue(11,LQR_K_LR[1] * theta_d);
+		// VOFA_JustFloat_AddValue(12,LQR_K_LR[2] * xb);
+		// VOFA_JustFloat_AddValue(13,LQR_K_LR[3] * xb_d);
+		// VOFA_JustFloat_AddValue(14,LQR_K_LR[4] * phi);
+		// VOFA_JustFloat_AddValue(15,LQR_K_LR[5] * phi_d);
+		// VOFA_JustFloat_AddValue(16,Leg_Date->Length_Feedback);
+		// VOFA_JustFloat_AddValue(17,WheelLeg_LQR_Struct.Wheel_Wz_Speed_PID.Output);
 	}
 	else if(Leg_Date->Leg_LR == Leg_R)
 	{
@@ -288,6 +302,7 @@ static void WheelLeg_LQR_calculation(Chassis_Leg_StructTypedef *Leg_Date, const 
 			Leg_Date->LQR_Link_Torque_Target[1] =  ( LQR_K_LR[6] * theta + LQR_K_LR[7] * theta_d + LQR_K_LR[8] * xb + LQR_K_LR[9] * xb_d + LQR_K_LR[10] * phi + LQR_K_LR[11] * phi_d ) + (WheelLeg_LQR_Struct.Leg_Splits_PID.Output);
 		}
 	}
+	// VOFA_JustFloat_AddValue(18,Leg_Date->LQR_Wheel_Torque_Target);
 	// //theta_d
 	// //R当前腿长好像有问题
 	// if(Leg_Date->Leg_LR == Leg_R)
@@ -314,7 +329,7 @@ void WheelLeg_LQR_Output(Chassis_Control_StructTypedef *Chassis_Control)
 	if(Chassis_Control->Chassis_Control.Chassis_State == Chassis_FOLLOW
 	|| Chassis_Control->Chassis_Control.Chassis_State == Chassis_SPIN
 	|| Chassis_Control->Chassis_Control.Chassis_State == Chassis_Jump
-	|| Chassis_Control->Chassis_Control.Chassis_State == Chassis_UpStep)
+	|| Chassis_Control->Chassis_Control.Chassis_State == Chassis_UpStep||1)
 	{
 		WheelLeg_LQR_add_six_state(Chassis_Control);
 
@@ -325,5 +340,5 @@ void WheelLeg_LQR_Output(Chassis_Control_StructTypedef *Chassis_Control)
 		WheelLeg_LQR_calculation(&Chassis_Control->Leg_Left,  *Chassis_Control);
 		WheelLeg_LQR_calculation(&Chassis_Control->Leg_Right, *Chassis_Control);
 	}
-		
+	
 }

@@ -32,11 +32,11 @@ void Communicate_Task(void *argument)
     for(;;)
     {
 		SuperCap_Send_Control_Data();
-		
+		osDelay(1);
 		Chassis_Send_Referee_Unpack();
+		osDelay(2);
 		Chassis_Send_Func_Data();
-		
-		osDelay(5);
+		osDelay(2);
     }  
 }
 
@@ -170,7 +170,8 @@ void Chassis_Send_Referee_Unpack(void)
 
 void Chassis_Send_Func_Data(void)
 {
-	if(Chassis_Control_Struct.Chassis_Control.Chassis_State == Chassis_Recover
+	if(Chassis_Control_Struct.Chassis_Control.Chassis_State == Chassis_OFF
+	|| Chassis_Control_Struct.Chassis_Control.Chassis_State == Chassis_Recover
 	|| Chassis_Control_Struct.Chassis_Control.Chassis_State == Chassis_RESET
 	|| Chassis_Control_Struct.Chassis_Control.Chassis_State == Chassis_RESET_Slow)
 	{

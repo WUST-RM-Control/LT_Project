@@ -30,8 +30,8 @@ Motor_Compensation_Config_StructTypedef Pitch_Compensation_Config =
     
     .Compensation_Round = 1,
     .Compensation_Speed = 5,
-    .Compensation_Angle_UP = 9,
-    .Compensation_Angle_Down = -43,
+    .Compensation_Angle_UP = -55,
+    .Compensation_Angle_Down = -100,
     
     .Data = Config.Motor_Pitch_Cal_Data,
     
@@ -48,8 +48,8 @@ void Motor_Compensation_Task(void)
     //清空原先的校准数据
     for(uint16_t i = 0; i < 2*Point_Num; i++) Yaw_Compensation_Config.Data[i] = 0; 
     //***PID参数初始化
-    PID_Init(&Yaw_Compensation_Config.Angle_PID, 3,  0, 5,  0,  0,    50);
-    PID_Init(&Yaw_Compensation_Config.Speed_PID, 300, 1, 0,    50, 6000, 25000);
+    PID_Init(&Yaw_Compensation_Config.Angle_PID, 15,   0,    550,   0,    0,   200);
+    PID_Init(&Yaw_Compensation_Config.Speed_PID, 20,   1,  0,  60 , 1500, 16384);
     //***循环校准
     while(Yaw_Compensation_Config.Caled_State <= 1)
     {
@@ -58,9 +58,8 @@ void Motor_Compensation_Task(void)
         Yaw_Compensation_Config.SpeedRPM_Feedback = Motor.Yaw.Total_Angle_Speed_RPM;
         //***更新校准数据(设置目标角度与速度，PID计算，保存校准值)
         Motor_Compensation(&Yaw_Compensation_Config);
-        //***输出电流
-        Motor_DJI_SendCurrent(&Gimbal_Yaw_CAN, Gimbal_Yaw_Send_CAN_ID, 0, Yaw_Compensation_Config.Current_Output,0 ,0);		
-        
+        //***输出电流	
+        Motor_DM_CMD_MIT(&Gimbal_Yaw_CAN, Gimbal_Yaw_Send_CAN_ID, 0,0,0,0,Yaw_Compensation_Config.Current_Output);
         osDelay(1);
     }
     //***计算齿槽补偿与摩擦补偿

@@ -62,12 +62,12 @@ void Robo_Task(void *argument)
         /*===| 如果遥控器连接 |===*/
         if(Remote_Control_Struct.If_Remote_Connect)
         {
-			if(Remote_Control_Struct.S1 != SW_Down && RoboControl_Struct.Robo_Enable == 0)
+			if((Remote_Control_Struct.S1 == SW_Up||Remote_Control_Struct.S1 == SW_Mid) && RoboControl_Struct.Robo_Enable == 0)
 			{
 				Robo_Restart();
 				RoboControl_Struct.Controler = Joystick;
 			}
-            else if(Remote_Control_Struct.S1 != SW_Down) 
+            else if(Remote_Control_Struct.S1 == SW_Up||Remote_Control_Struct.S1 == SW_Mid) 
 			{
 				RoboControl_Struct.Controler = Joystick;
                 RoboControl_Struct.Robo_Enable = 1;

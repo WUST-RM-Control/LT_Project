@@ -41,9 +41,10 @@ typedef struct
     float Robo_Target_Vx_Last;		//相对云台的左右速度(云台右为正方向)，m/s
     float Robo_Target_Wz_Last;		//相对云台的旋转速度(逆时针为正方向)，弧度/s
 
-    float Yaw_Err;				//云台相对底盘的角度差值[-180 ~ +180]°
-	float Target_Direction;		//云台相对底盘的角度差值的目标方向，°
-	float Target_Direction_Err;	//当前目标方向与云台的角度差值°
+    float Yaw_Err;				//云台相对底盘正方向的角度差值[-180 ~ +180]°
+	float Target_Direction;		//恒为0
+	float Target_Direction_Err;	//当前云台方向与云台相对底盘的目标朝向的角度差值°
+	float Target_Direction_Flag;//0：云台目标朝向底盘正方向，1：云台目标朝向底盘负方向 
     
 	uint8_t Chassis_Speed_Level;//底盘速度等级1~5
 	uint8_t Jump_Level;	//跳跃等级1~3

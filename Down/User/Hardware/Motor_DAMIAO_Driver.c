@@ -136,9 +136,9 @@ void Motor_DM_Storage_Data(uint8_t *Data, Motor_Data_StructTypeDef *Motor_Data_S
     if(Error_ID == 1)
     {
         Motor_Data_Struct->Ticker = 0;
-        Motor_Data_Struct->Date_New = 1;
         Motor_Data_Struct->If_Online = 1; 
     }
+    Motor_Data_Struct->Date_New = 1;
 }
 
 /**
@@ -154,6 +154,7 @@ void Motor_DM1to4_Storage_Data(uint8_t *Data, Motor_Data_StructTypeDef *Motor_Da
     Motor_Data_Struct->Speed_RPM = (int16_t)(Data[2] << 8 | Data[3]) / 100.0f;
     Motor_Data_Struct->Torque = (int16_t)(Data[4] << 8 |Data[5]);
     Motor_Data_Struct->Temperature = (int16_t)(Data[6]);
+	Motor_Data_Struct->Error_ID = Data[7];
     
     Motor_Data_Struct->Angle = (Motor_Data_Struct->Encoder - 4096.0f) * 180.0f / 4096.0f;
     
@@ -166,8 +167,12 @@ void Motor_DM1to4_Storage_Data(uint8_t *Data, Motor_Data_StructTypeDef *Motor_Da
     Motor_Data_Struct->Encoder_Last = Motor_Data_Struct->Encoder;
     Motor_Data_Struct->Angle_Last = Motor_Data_Struct->Angle;
     
-//    Motor_Data_Struct->Ticker = 0;
-//    Motor_Data_Struct->If_Online = 1; 
+    if(Motor_Data_Struct->Error_ID == 1)
+    {
+        Motor_Data_Struct->Ticker = 0;
+        Motor_Data_Struct->If_Online = 1; 
+    }
+    Motor_Data_Struct->Date_New = 1;
 }
 
 /**

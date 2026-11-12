@@ -120,7 +120,7 @@ void Chassis_Task(void const * argument)
 		// 	Motor_DM_CMD_SetZero(&Chassis_JointMotor3_CAN,Chassis_JointMotor3_Send_CAN_ID);
 		// 	Motor_DM_CMD_SetZero(&Chassis_JointMotor4_CAN,Chassis_JointMotor4_Send_CAN_ID);
 		// 	osDelay(100);	//延时100ms防止设完零点进入运动控制疯车
-		// 	Buzzer_Set_SoundEffect(Buzzer_SoundEffect_SetZero_Done);
+		// 	Buzzer_Set_SoundEffect(Buzzer_SoundEffect_SystemStart);
 			
 		// 	RoboControl_Struct.If_SettingZero = 0;
 		// }

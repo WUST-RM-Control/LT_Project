@@ -1,30 +1,59 @@
-#include "main.h"
-#include <stdint.h>
-#include "usart.h"
-#include "usbd_cdc_if.h"
+#include "VOFA.h"
 
-#include "vofa.h"
+#define NUM_Date 32
 
-typedef struct {
-    uint8_t header[4];      // 帧头：0xAF 0xFA 0x00 0x00
-    uint16_t data_length;   // 数据长度（浮点数个数）
-    float *data;            // 浮点数数组
-    uint8_t footer[4];      // 帧尾：0x00 0x00 0xFA 0xAF
-}  JustFloat_Frame;
-
-HAL_StatusTypeDef JustFloat_Send(float *data, uint16_t length)
+/**
+ * @brief VOFA串口接收中断回调函数
+ *
+ * @param 串口收到的数组
+ */
+void VOFA_Rx_CallBack(uint8_t *VOFA_RxDataBuff)
 {
-    JustFloat_Frame frame;
-    frame.data = data;
-    frame.footer[0] = 0x00;
-    frame.footer[1] = 0x00;
-    frame.footer[2] = 0x80;
-    frame.footer[3] = 0x7F;
+	// float VOFA_RX_Float =   (VOFA_RxDataBuff[3]-0x30)*10000+
+    //                         (VOFA_RxDataBuff[4]-0x30)*1000+
+    //                         (VOFA_RxDataBuff[5]-0x30)*100+
+    //                         (VOFA_RxDataBuff[6]-0x30)*10+
+    //                         (VOFA_RxDataBuff[7]-0x30)*1+
+    //                         (VOFA_RxDataBuff[9]-0x30)*0.1f+
+    //                         (VOFA_RxDataBuff[10]-0x30)*0.01f+
+    //                         (VOFA_RxDataBuff[11]-0x30)*0.001f;
+    // if(VOFA_RxDataBuff[2] == '-') VOFA_RX_Float = -VOFA_RX_Float;
+	
+    
+	// if		(VOFA_RxDataBuff[0]=='1' && VOFA_RxDataBuff[1]=='P') 
+    // {
+    //     Shoot_Fric_First_Left_Speed   = VOFA_RX_Float;
+    //     Shoot_Fric_First_Right_Speed  = VOFA_RX_Float;
+    //     Shoot_Fric_First_Middle_Speed = VOFA_RX_Float;
+    // }
+	// else if	(VOFA_RxDataBuff[0]=='1' && VOFA_RxDataBuff[1]=='I')
+    // {
+    //     Shoot_Fric_Second_Left_Speed   = VOFA_RX_Float;
+    //     Shoot_Fric_Second_Right_Speed  = VOFA_RX_Float;
+    //     Shoot_Fric_Second_Middle_Speed = VOFA_RX_Float;
+    // }
+    // else if	(VOFA_RxDataBuff[0]=='1' && VOFA_RxDataBuff[1]=='D')
+    // {
 
+    // }
+    // else if	(VOFA_RxDataBuff[0]=='1' && VOFA_RxDataBuff[1]=='E') 
+    // {
 
-	  if (CDC_Transmit_FS((uint8_t *)frame.data, length * sizeof(float)) != HAL_OK) return HAL_ERROR;
-	  osDelay(1);//防止发送过快导致帧尾不发送
-    if (CDC_Transmit_FS(frame.footer, 4) != HAL_OK) return HAL_ERROR;
+    // }
+}
 
-    return HAL_OK;
+float VOFA_JustFloat_Buffer[NUM_Date];
+uint8_t VOFA_JustFloat_Buffer_End = 0;
+void VOFA_JustFloat_AddValue(uint8_t NUM, float Data)
+{
+    VOFA_JustFloat_Buffer[NUM] = Data;
+    VOFA_JustFloat_Buffer_End = MAX(VOFA_JustFloat_Buffer_End, NUM);
+}
+
+void VOFA_JustFloat_Send(UART_HandleTypeDef *huart)
+{
+    uint8_t tail[4] = {0x00, 0x00, 0x80, 0x7f};
+    memcpy(&VOFA_JustFloat_Buffer[VOFA_JustFloat_Buffer_End + 1], tail, 4);
+    
+    HAL_UART_Transmit(huart, (uint8_t *)VOFA_JustFloat_Buffer, 4*(VOFA_JustFloat_Buffer_End + 2), 10);
 }

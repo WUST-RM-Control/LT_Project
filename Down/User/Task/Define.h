@@ -82,7 +82,7 @@
 
 /*===| 底盘计算参数定义 |===*/
     #define Leg_Length_Min  0.15f
-    #define Leg_Length_Max  0.38f
+    #define Leg_Length_Max  0.366f
 
 //	#define 	PI   3.14159265359f
 	#define 	Angle_to_Radain	 0.0174533f //角度to弧度(PI/180)
@@ -97,38 +97,6 @@
 	#define 	Q_R_F 2 
 	#define 	Q_R_B 3 
 	
-	/*
-	 * @note 原 Down 工程此处定义了 S/S_D/YAW/YAW_D/QB/QB_D 六个单字母宏(LQR 状态量下标),
-	 * @note 但全工程(含 Down 自己)已无任何引用,属遗留宏;
-	 * @note 而 S / YAW / QB 等单字母名会污染内核库(如 kalman_filter.h 里的 mat S),
-	 * @note 因此移植到 MC02 时删除,如需 LQR 状态下标请用带前缀的新名字。
-	 */
-//	#define 	S  	  0
-//	#define 	S_D   1
-//	#define 	YAW   2
-//	#define 	YAW_D 3
-//	#define 	QB    4
-//	#define 	QB_D  5
-	
-/*===| 电机ID，对应电机数据结构体数组下标 |===*/
-    #define Chassis_DriverMotor1_ID     5
-    #define Chassis_DriverMotor2_ID     6
-	
-	#define Chassis_Joint_ID        	0 
-	#define Chassis_Joint1_ID      		1
-    #define Chassis_Joint2_ID      		2
-	#define Chassis_Joint3_ID      		3
-    #define Chassis_Joint4_ID      		4
-		
-    #define Gimbal_Pitch_ID             5
-    #define Gimbal_Yaw_ID          		6
-    #define Shoot_Fric_First_Left_ID    7
-    #define Shoot_Fric_First_Right_ID   8
-    #define Shoot_Fric_First_Middle_ID  9
-    #define Shoot_Trigger_ID            10
-    #define Shoot_Fric_Second_Left_ID   11
-    #define Shoot_Fric_Second_Right_ID  12
-    #define Shoot_Fric_Second_Middle_ID 13
 
 /*===| 移植兼容层(Down 的名字 -> MC02 现有的名字) |===*/
 /*

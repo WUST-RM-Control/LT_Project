@@ -78,6 +78,11 @@ void Robo_Task(void *argument)
             Robo_Stop(); 
         }
         
+        // /*===| 自定义功能-左摇杆向上 |===*/
+        // if      (Remote_Control_Struct.RC_Left_Y > 0.8f && Remote_Control_Last_Struct.RC_Left_Y < 0.8f&&Remote_Control_Struct.RC_Side < -0.7f)
+        // {
+        //     RoboControl_Struct.If_SettingZero = 1;//设零点
+        // }
         /*===| 遥控方式 |===*/
         /*===| 遥控器摇杆控制 |===*/
         if(RoboControl_Struct.Controler == Joystick)
@@ -146,7 +151,31 @@ void Get_Chassis_Wz(void)
     else if(RoboControl_Struct.Chassis_State == Chassis_FOLLOW
     ||      RoboControl_Struct.Chassis_State == Chassis_UpStep)//上台阶准备态运控与跟随一致
     {
-        RoboControl_Struct.Target_Direction_Err = RoboControl_Struct.Yaw_Err;
+        if(RoboControl_Struct.Yaw_Err<90.0f&&RoboControl_Struct.Yaw_Err>-90.0f)
+        {
+            RoboControl_Struct.Target_Direction_Flag = 0;
+        }
+        else
+        {
+            RoboControl_Struct.Target_Direction_Flag = 1;
+        }
+        if(RoboControl_Struct.Target_Direction_Flag == 0)
+        {
+            RoboControl_Struct.Target_Direction_Err = RoboControl_Struct.Yaw_Err;
+        }
+        else
+        {
+            if(RoboControl_Struct.Yaw_Err>0.0f)
+            {
+                RoboControl_Struct.Target_Direction_Err = RoboControl_Struct.Yaw_Err - 180.0f;
+            }
+            else
+            {
+                RoboControl_Struct.Target_Direction_Err = RoboControl_Struct.Yaw_Err + 180.0f;
+            }
+            
+        }
+       
 		PID_Position_Calculate(&RoboWz_PID_Struct, RoboControl_Struct.Target_Direction, RoboControl_Struct.Target_Direction_Err);
         RoboControl_Struct.Robo_Target_Wz = RoboWz_PID_Struct.Output;
 
@@ -229,7 +258,8 @@ void RemoteControl_Float(void)
 				RoboControl_Struct.Robo_Target_Vy = 2.30f * (Remote_Control_Struct.RC_Left_Y);
 				break;
 		}
-	   
+        if(RoboControl_Struct.Target_Direction_Flag) RoboControl_Struct.Robo_Target_Vy = -RoboControl_Struct.Robo_Target_Vy;
+
 	   /*===| 底盘静止状态下 以云台为正方向 左摇杆直接控制底盘全向移动 先转向再前进 与云台控制解耦 |===*/
 	   if(RoboControl_Struct.Chassis_State == Chassis_FOLLOW || RoboControl_Struct.Chassis_State == Chassis_SPIN
 	   || RoboControl_Struct.Chassis_State == Chassis_UpStep)//上台阶准备态运控与跟随一致
@@ -272,7 +302,7 @@ void RemoteControl_Bool(void)
 		
 		if((RoboControl_Struct.Robo_Enable == 1) && Remote_Control_Struct.RC_Side > 0.7f)
 		{
-			RoboControl_Struct.Leg_Length += 0.16f * Remote_Control_Struct.RC_Right_Y * Dt;//控制腿长
+			RoboControl_Struct.Leg_Length += 0.4f * Remote_Control_Struct.RC_Right_Y * Dt;//控制腿长
 			/*===| 自定义功能-左摇杆向右 |===*/
             if(Remote_Control_Struct.RC_Left_X > 0.8f && Remote_Control_Last_Struct.RC_Left_X < 0.8f)
             {
@@ -655,8 +685,8 @@ void Robo_Stop(void)
     //0:缓失能，1:直接失能
 	if(Remote_Control_Struct.S2 == SW_Down)
 	{
-	    // RoboControl_Struct.Chassis_State  = Chassis_OFF_Slow;
-	    RoboControl_Struct.Chassis_State  = Chassis_OFF;
+	    RoboControl_Struct.Chassis_State  = Chassis_OFF_Slow;
+	    // RoboControl_Struct.Chassis_State  = Chassis_OFF;
 	}
 	else
 	{
@@ -689,7 +719,7 @@ void Robo_Restart(void)
 	else
 	{
 		RoboControl_Struct.Chassis_Control_Flag.Chassis_RESET_Slow_FLag = 1;
-	// 	RoboControl_Struct.Chassis_Control_Flag.Chassis_RESET_Slow_FLag = 0;
+		// RoboControl_Struct.Chassis_Control_Flag.Chassis_RESET_Slow_FLag = 0;
 	}
 	/*===| 默认模块状态 |===*/
 	RoboControl_Struct.Chassis_State  = Chassis_Recover;

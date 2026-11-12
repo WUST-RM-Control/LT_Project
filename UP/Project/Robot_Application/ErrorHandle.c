@@ -101,14 +101,14 @@ void ErrorHandle_Task(void const * argument)
         Motor.Yaw.     Ticker++; if(Motor.Yaw.     Ticker >= 100) Motor.Yaw.     If_Online = 0; if(Motor.Yaw.     Ticker >  110) Motor.Yaw.     Ticker = 100;
 
 
-//        /*===| Yaw电机离线断连处理 |===*/
-//        if(Motor_Data_Struct[Gimbal_Yaw_ID].Ticker == 110)      
-//        {
-//            Motor_DM_CMD_ClearErr(&Gimbal_Yaw_CAN, Gimbal_Yaw_Send_CAN_ID);
-//            osDelay(1);
-//            Motor_DM_CMD_Enable(&Gimbal_Yaw_CAN, Gimbal_Yaw_Send_CAN_ID);
-//        }
-      
+        /*===| Yaw电机离线断连处理 |===*/
+        if(Motor.Yaw.Ticker == 110)      
+        {
+            Motor_DM_CMD_ClearErr(&Gimbal_Yaw_CAN, Gimbal_Yaw_Send_CAN_ID);
+            osDelay(1);
+            Motor_DM_CMD_Enable(&Gimbal_Yaw_CAN, Gimbal_Yaw_Send_CAN_ID);
+        }
+        // VOFA_JustFloat_Send(&huart4);
       
       
     osDelay(1);
