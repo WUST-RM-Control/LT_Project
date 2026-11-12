@@ -329,7 +329,7 @@ void WheelLeg_LQR_Output(Chassis_Control_StructTypedef *Chassis_Control)
 	if(Chassis_Control->Chassis_Control.Chassis_State == Chassis_FOLLOW
 	|| Chassis_Control->Chassis_Control.Chassis_State == Chassis_SPIN
 	|| Chassis_Control->Chassis_Control.Chassis_State == Chassis_Jump
-	|| Chassis_Control->Chassis_Control.Chassis_State == Chassis_UpStep||1)
+	|| Chassis_Control->Chassis_Control.Chassis_State == Chassis_UpStep)
 	{
 		WheelLeg_LQR_add_six_state(Chassis_Control);
 

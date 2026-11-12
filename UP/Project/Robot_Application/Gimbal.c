@@ -119,7 +119,6 @@ void Gimbal_Task(void *argument)
         PID_Position_Calculate(&Gimbal_Control_Struct.Pitch_Speed_PID_Struct, Gimbal_Control_Struct.Pitch_Angle_PID_Struct.Output, 		INS_Data_Internal.Gyro[1]*PI_to_Degree);
         
         /*===| 限幅 |===*/
-		static float Yaw_Output_ = 0;
 //        float Yaw_Output = Motor_Compensation_Get_Data(Motor.Yaw.Total_Angle, Motor.Yaw.Total_Angle_Speed_RPM, &Yaw_Compensation_Config) + RoboControl_Struct.Smooth_Start_K*Gimbal_Control_Struct.Yaw_Speed_PID_Struct.Output;
         float Yaw_Output = RoboControl_Struct.Smooth_Start_K*Gimbal_Control_Struct.Yaw_Speed_PID_Struct.Output;
         float Pitch_Output = -RoboControl_Struct.Smooth_Start_K*Gimbal_Control_Struct.Pitch_Speed_PID_Struct.Output;
@@ -130,25 +129,25 @@ void Gimbal_Task(void *argument)
     //    Gimbal_Control_Struct.Yaw_Speed_Lock_PID_Struct.Output =  - RoboControl_Struct.Smooth_Start_K*Gimbal_Control_Struct.Yaw_Speed_Lock_PID_Struct.Output;
        Limit_float(&Yaw_Output  ,16384,-16384);
        Limit_float(&Pitch_Output,25000,-25000);
-       VOFA_JustFloat_AddValue(0,Gimbal_Control_Struct.Yaw_Angle_PID_Struct.Feedback);
-       VOFA_JustFloat_AddValue(1,Gimbal_Control_Struct.Yaw_Angle_PID_Struct.Target);
-       VOFA_JustFloat_AddValue(2,Gimbal_Control_Struct.Yaw_Angle_PID_Struct.Output);
-       VOFA_JustFloat_AddValue(3,Gimbal_Control_Struct.Yaw_Speed_PID_Struct.Feedback);
-       VOFA_JustFloat_AddValue(4,Gimbal_Control_Struct.Yaw_Speed_PID_Struct.Target);
-       VOFA_JustFloat_AddValue(5,Gimbal_Control_Struct.Yaw_Speed_PID_Struct.Output);
-       VOFA_JustFloat_AddValue(6,Gimbal_Control_Struct.Pitch_Angle_PID_Struct.Feedback);
-       VOFA_JustFloat_AddValue(7,Gimbal_Control_Struct.Pitch_Angle_PID_Struct.Target);
-       VOFA_JustFloat_AddValue(8,Gimbal_Control_Struct.Pitch_Angle_PID_Struct.Output);
-       VOFA_JustFloat_AddValue(9,Gimbal_Control_Struct.Pitch_Speed_PID_Struct.Feedback);
-       VOFA_JustFloat_AddValue(10,Gimbal_Control_Struct.Pitch_Speed_PID_Struct.Target);
-       VOFA_JustFloat_AddValue(11,Gimbal_Control_Struct.Pitch_Speed_PID_Struct.Output);
-       VOFA_JustFloat_AddValue(12,INS_Data_Internal.Roll);
-       VOFA_JustFloat_AddValue(13,INS_Data_Internal.Pitch);
-       VOFA_JustFloat_AddValue(14,INS_Data_Internal.Yaw);
-//       VOFA_JustFloat_AddValue(15,INS_Data_Internal.Pitch_Speed);
-       VOFA_JustFloat_AddValue(16,INS_Data_Internal.Gyro[0]*PI_to_Degree);
-       VOFA_JustFloat_AddValue(17,INS_Data_Internal.Gyro[1]*PI_to_Degree);
-       VOFA_JustFloat_AddValue(18,INS_Data_Internal.Gyro[2]*PI_to_Degree);
+//        VOFA_JustFloat_AddValue(0,Gimbal_Control_Struct.Yaw_Angle_PID_Struct.Feedback);
+//        VOFA_JustFloat_AddValue(1,Gimbal_Control_Struct.Yaw_Angle_PID_Struct.Target);
+//        VOFA_JustFloat_AddValue(2,Gimbal_Control_Struct.Yaw_Angle_PID_Struct.Output);
+//        VOFA_JustFloat_AddValue(3,Gimbal_Control_Struct.Yaw_Speed_PID_Struct.Feedback);
+//        VOFA_JustFloat_AddValue(4,Gimbal_Control_Struct.Yaw_Speed_PID_Struct.Target);
+//        VOFA_JustFloat_AddValue(5,Gimbal_Control_Struct.Yaw_Speed_PID_Struct.Output);
+//        VOFA_JustFloat_AddValue(6,Gimbal_Control_Struct.Pitch_Angle_PID_Struct.Feedback);
+//        VOFA_JustFloat_AddValue(7,Gimbal_Control_Struct.Pitch_Angle_PID_Struct.Target);
+//        VOFA_JustFloat_AddValue(8,Gimbal_Control_Struct.Pitch_Angle_PID_Struct.Output);
+//        VOFA_JustFloat_AddValue(9,Gimbal_Control_Struct.Pitch_Speed_PID_Struct.Feedback);
+//        VOFA_JustFloat_AddValue(10,Gimbal_Control_Struct.Pitch_Speed_PID_Struct.Target);
+//        VOFA_JustFloat_AddValue(11,Gimbal_Control_Struct.Pitch_Speed_PID_Struct.Output);
+//        VOFA_JustFloat_AddValue(12,INS_Data_Internal.Roll);
+//        VOFA_JustFloat_AddValue(13,INS_Data_Internal.Pitch);
+//        VOFA_JustFloat_AddValue(14,INS_Data_Internal.Yaw);
+// //       VOFA_JustFloat_AddValue(15,INS_Data_Internal.Pitch_Speed);
+//        VOFA_JustFloat_AddValue(16,INS_Data_Internal.Gyro[0]*PI_to_Degree);
+//        VOFA_JustFloat_AddValue(17,INS_Data_Internal.Gyro[1]*PI_to_Degree);
+//        VOFA_JustFloat_AddValue(18,INS_Data_Internal.Gyro[2]*PI_to_Degree);
     //    Limit_float(&Gimbal_Control_Struct.Yaw_Speed_Lock_PID_Struct.Output ,25000,-25000);
         
         /*===| 发送电压参数 |===*/
@@ -160,7 +159,7 @@ void Gimbal_Task(void *argument)
         else 
         {
             Motor_DJI_SendCurrent(&Gimbal_Pitch_CAN, Gimbal_Pitch_Send_CAN_ID, 0, 0 ,0 ,0);
-            Motor_DM_CMD_MIT(&Gimbal_Yaw_CAN, Gimbal_Yaw_Send_CAN_ID, 0, 0 ,0 ,0 ,Yaw_Output_);
+            Motor_DM_CMD_MIT(&Gimbal_Yaw_CAN, Gimbal_Yaw_Send_CAN_ID, 0, 0 ,0 ,0 ,0);
         }
         osDelay(1);
     }

@@ -29,16 +29,16 @@
 //蓄力到位腿长阈值(m)
 const float Chassis_Jump_Ready_Link_Arrive = 0.16f;
 //跳跃等级对应蹬伸腿长(m)
-const float  Chassis_Jump_Push_Leg_Length_1 = 0.30f;
-const float  Chassis_Jump_Push_Leg_Length_2 = 0.33f;
-const float  Chassis_Jump_Push_Leg_Length_3 = 0.35f;
+const float  Chassis_Jump_Push_Leg_Length_1 = 0.20f;
+const float  Chassis_Jump_Push_Leg_Length_2 = 0.25f;
+const float  Chassis_Jump_Push_Leg_Length_3 = 0.33f;
 //收腿到位腿长阈值(m)
 const float Chassis_Jump_Fold_Link_Arrive = 0.17f;
 //跳跃结束腿长(m)
 const float Chassis_Jump_End_Leg_length     = 0.20f;
 //蹬腿沿杆力最大前馈(N，伸腿方向为正)与实际前馈权重的变化速率(0->1,需要1/Chassis_Jump_Push_Slope_Up时间)
-const float Chassis_Jump_Push_Link_F        = 360.0f;
-const float Chassis_Jump_Push_Slope_Up      = 15.0f;
+const float Chassis_Jump_Push_Link_F        = 330.0f;
+const float Chassis_Jump_Push_Slope_Up      = 25.0f;
 //空中收腿沿杆力最大前馈(N，收腿方向为负)与其实际前馈权重的变化速率(0->1,需要1/Chassis_Jump_Fold_Slope_Up时间)
 const float Chassis_Jump_Fold_Link_F        = -50.0f;
 const float Chassis_Jump_Fold_Slope_Up      = 10.0f;
