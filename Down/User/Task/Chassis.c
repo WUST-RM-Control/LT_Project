@@ -1,0 +1,289 @@
+/**
+ * @file    Chassis.c[底盘控制]
+ * @brief   轮腿底盘控制
+ * @details 统一接口,外部控制底盘数据和传感器数据统一从 Chassis_Task 传入；
+ *          Chassis_Task 调用 WheelLeg 文件的上层函数实现底盘的控制；
+ *          Chassis_Control_Struct中存储需要输入到WheelLeg文件任务函数的参数
+ * 			底层相关的底盘数据定义在各个 WheelLeg 前缀文件中
+ */
+
+#include "Chassis.h"
+#include "RoboControl.h"
+#include "Power_Limit.h"
+#include "CAN_Driver.h"
+#include "Motor_DJI_Driver.h"
+#include "PID.h"
+#include "USART_Driver.h"
+#include "Motor_DAMIAO_Driver.h"
+#include "Referee_Unpack.h"
+#include "Vofa.h"
+#include "INS.h"
+#include "INS_Chassis_Data.h"
+#include "Function.h"
+#include "Buzzer.h"
+#include "arm_math.h"  // CMSIS-DSP 库
+#include "user_lib.h"
+#include "Remote_Control.h"
+#include "kalman_filter.h"
+#include <math.h>   
+#include <stdbool.h>
+
+
+#include "WheelLeg_SpringComp.h"
+#include "WheelLeg_Kinematics.h"
+#include "WheelLeg_LQR.h"
+#include "WheelLeg_Output.h"
+#include "WheelLeg_Chassis.h"
+
+Chassis_Control_StructTypedef Chassis_Control_Struct = 
+{
+    .Leg_Left.Leg_LR  = Leg_L,
+    .Leg_Right.Leg_LR = Leg_R
+};
+// void WheelLeg_Output_Motor_Send_Current
+// (const float Joint1, 
+// const float Joint2, 
+// const float Joint3, 
+// const float Joint4, 
+// const float Wheel_Left,
+// const float Wheel_Right)
+// {
+//     Motor_DM_CMD_MIT(&Chassis_JointMotor1_CAN, Chassis_JointMotor1_Send_CAN_ID, 0, 0, 0, 0, Joint1);
+//     Motor_DM_CMD_MIT(&Chassis_JointMotor2_CAN, Chassis_JointMotor2_Send_CAN_ID, 0, 0, 0, 0, Joint2);
+//     Motor_DM_CMD_MIT(&Chassis_JointMotor3_CAN, Chassis_JointMotor3_Send_CAN_ID, 0, 0, 0, 0, Joint3);
+//     Motor_DM_CMD_MIT(&Chassis_JointMotor4_CAN, Chassis_JointMotor4_Send_CAN_ID, 0, 0, 0, 0, Joint4);
+//     Motor_DJI_SendCurrent(&Chassis_DriverMotor_CAN,Chassis_DriverMotor_Send_CAN_ID,0,0,Wheel_Left,Wheel_Right);
+// }
+void Chassis_Task(void const * argument)
+{
+	osDelay(100);
+// WheelLeg_SpringComp_Measure_Task
+// (0,
+// &RoboControl_Struct.Robo_Enable,
+// WheelLeg_Output_Motor_Send_Current,
+// &Motor.Joint1,
+// &Motor.Joint2,
+// &Motor.Joint3,
+// &Motor.Joint4);
+    /*===| 默认模块赋值 |===*/
+    Chassis_Control_Struct.Chassis_Control.Chassis_State = Chassis_OFF;
+    Chassis_Control_Struct.Chassis_Control.Jump_Level = 1;
+    Chassis_Control_Struct.Chassis_Control.Leg_Length_Feebback = Leg_Length_Max;
+    DWT_GetDeltaT(&Chassis_Control_Struct.Chassis_Count);
+
+    //运动学解算初始化(卡尔曼滤波器参数)
+    WheelLeg_Kinematics_Init();
+    //LQR运控初始化
+    WheelLeg_LQR_Init();
+    //电流输出初始化
+    WheelLeg_Output_Init();
+    //氮气弹簧补偿初始化
+    WheelLeg_SpringComp_Init();
+    for(;;)
+    {
+        Chassis_Control_Struct.Chassis_Dt = DWT_GetDeltaT(&Chassis_Control_Struct.Chassis_Count);
+        
+        /*===| 获得外部数据 |===*/
+        Get_Control_Data(&Chassis_Control_Struct);
+        
+        // VOFA_JustFloat_AddValue(0,Chassis_Control_Struct.Chassis_Control.Chassis_State);
+        // VOFA_JustFloat_AddValue(1,INS_Chassis_Data.Roll);
+        // VOFA_JustFloat_AddValue(2,INS_Chassis_Data.Pitch);
+        // VOFA_JustFloat_AddValue(3,INS_Chassis_Data.Yaw);
+        /*===| 底盘运动学解算 |===*/
+        WheelLeg_Kinematics_Update(&Chassis_Control_Struct);
+
+        /*===| 翻倒自起 |===*/
+        Chassis_Smooth_Restand_Fun(&Chassis_Control_Struct);
+
+        /*===| 跳跃 |===*/
+        Chassis_Jump_Fun(&Chassis_Control_Struct);
+
+        /*===| 缓失能 |===*/
+        Chassis_OFF_Slow_Fun(&Chassis_Control_Struct,RoboControl_Struct.Smooth_Start_K);
+        
+        /*===| LQR运控解算 |===*/
+        WheelLeg_LQR_Output(&Chassis_Control_Struct);
+
+        /*===| 上台阶(磕台阶后摆腿+收腿,覆盖LQR输出) |===*/
+        Chassis_Up_Step_Fun(&Chassis_Control_Struct);
+
+        /*===| 氮气弹簧补偿 |===*/
+        WheelLeg_SpringComp(&Chassis_Control_Struct.Leg_Left, Chassis_Control_Struct.Chassis_Control.Leg_Length_Target - Chassis_Control_Struct.Chassis_Control.Leg_Length_Feebback);
+        WheelLeg_SpringComp(&Chassis_Control_Struct.Leg_Right,Chassis_Control_Struct.Chassis_Control.Leg_Length_Target - Chassis_Control_Struct.Chassis_Control.Leg_Length_Feebback);
+
+		// if(RoboControl_Struct.If_SettingZero)
+		// {
+		// 	Motor_DM_CMD_SetZero(&Chassis_JointMotor1_CAN,Chassis_JointMotor1_Send_CAN_ID);
+		// 	Motor_DM_CMD_SetZero(&Chassis_JointMotor2_CAN,Chassis_JointMotor2_Send_CAN_ID);
+		// 	osDelay(1);
+		// 	Motor_DM_CMD_SetZero(&Chassis_JointMotor3_CAN,Chassis_JointMotor3_Send_CAN_ID);
+		// 	Motor_DM_CMD_SetZero(&Chassis_JointMotor4_CAN,Chassis_JointMotor4_Send_CAN_ID);
+		// 	osDelay(100);	//延时100ms防止设完零点进入运动控制疯车
+		// 	Buzzer_Set_SoundEffect(Buzzer_SoundEffect_SystemStart);
+			
+		// 	RoboControl_Struct.If_SettingZero = 0;
+		// }
+        /*===| 输出 |===*/
+        WheelLeg_Output(&Chassis_Control_Struct);
+
+        /*===| 错误状态检测(离地) |===*/
+        Chassis_Off_Ground_Fun(&Chassis_Control_Struct);
+        
+        osDelay(1);
+    }
+}
+
+/**
+ * @brief 获得外部数据
+ * @note RoboControl_Struct赋值控制数据
+ * @note INS赋值状态数据
+ * 
+ */
+void Get_Control_Data(Chassis_Control_StructTypedef *Chassis_Control_Struct)
+{
+/*===| INS数据刷新(经INS_Chassis_Data中间层,极性/安装差异全部在INS_Chassis_Data.c里处理) |===*/
+    INS_Chassis_Data_Update();
+
+/*===| RoboControl_Struct数据赋值 |===*/
+    //地盘状态赋值
+    static Chassis_State_EnumTypedef Chassis_State_Last;
+    static Chassis_State_EnumTypedef RoboControl_State_Last;
+    if(Chassis_Control_Struct->Chassis_Control.Chassis_State != Chassis_State_Last)
+    {
+        RoboControl_Struct.Chassis_State = Chassis_Control_Struct->Chassis_Control.Chassis_State;
+        Chassis_State_Last = Chassis_Control_Struct->Chassis_Control.Chassis_State;
+    }
+    else if(RoboControl_Struct.Chassis_State != RoboControl_State_Last)
+    {
+        Chassis_Control_Struct->Chassis_Control.Chassis_State = RoboControl_Struct.Chassis_State;
+        RoboControl_State_Last = RoboControl_Struct.Chassis_State;
+    }
+    //标志位状态赋值
+    if(RoboControl_Struct.Chassis_Control_Flag.Chassis_RESET_Slow_FLag)
+    {
+        Chassis_Control_Struct->WheelLeg_Control_Flag.Chassis_RESET_Slow_FLag = RoboControl_Struct.Chassis_Control_Flag.Chassis_RESET_Slow_FLag;
+        RoboControl_Struct.Chassis_Control_Flag.Chassis_RESET_Slow_FLag = 0;
+    }
+    if(RoboControl_Struct.Chassis_Control_Flag.Chassis_Jump_FLag)
+    {
+        Chassis_Control_Struct->WheelLeg_Control_Flag.Chassis_Jump_FLag = RoboControl_Struct.Chassis_Control_Flag.Chassis_Jump_FLag;
+        RoboControl_Struct.Chassis_Control_Flag.Chassis_Jump_FLag = 0;
+    }
+    if(RoboControl_Struct.Chassis_Control_Flag.Up_Step_Flag)
+    {
+        Chassis_Control_Struct->WheelLeg_Control_Flag.Up_Step_Flag = RoboControl_Struct.Chassis_Control_Flag.Up_Step_Flag;
+        RoboControl_Struct.Chassis_Control_Flag.Up_Step_Flag = 0;
+    }
+
+    //底盘运动目标速度
+    Chassis_Control_Struct->Chassis_Control.Vy_Target = RoboControl_Struct.Robo_Target_Vy;
+    Chassis_Control_Struct->Chassis_Control.Vx_Target = RoboControl_Struct.Robo_Target_Vx;
+    Chassis_Control_Struct->Chassis_Control.Wz_Speed_Target = RoboControl_Struct.Robo_Target_Wz;
+
+    Chassis_Control_Struct->Chassis_Control.Jump_Level = RoboControl_Struct.Jump_Level;
+
+    //腿部腿长数据
+    static float Leg_Length_Target_Last;
+    if(Chassis_Control_Struct->Chassis_Control.Chassis_State == Chassis_FOLLOW
+    || Chassis_Control_Struct->Chassis_Control.Chassis_State == Chassis_SPIN)
+    {
+        if(Leg_Length_Target_Last != RoboControl_Struct.Leg_Length)
+        {
+            Chassis_Control_Struct->Chassis_Control.Leg_Length_Target = RoboControl_Struct.Leg_Length;
+            Leg_Length_Target_Last = RoboControl_Struct.Leg_Length;
+        }
+        else if(Leg_Length_Target_Last != Chassis_Control_Struct->Chassis_Control.Leg_Length_Target)
+        {
+            RoboControl_Struct.Leg_Length = Chassis_Control_Struct->Chassis_Control.Leg_Length_Target;
+            Leg_Length_Target_Last = RoboControl_Struct.Leg_Length;
+        }
+    }
+    else if(Chassis_Control_Struct->Chassis_Control.Chassis_State == Chassis_OFF)
+    {
+        Chassis_Control_Struct->Chassis_Control.Leg_Length_Target = Chassis_Control_Struct->Chassis_Control.Leg_Length_Feebback;
+        RoboControl_Struct.Leg_Length = Chassis_Control_Struct->Chassis_Control.Leg_Length_Feebback;
+
+        Chassis_Control_Struct->Leg_Left.Total_Angle_Target  = Chassis_Control_Struct->Leg_Left.Total_Angle_Feedback;
+        Chassis_Control_Struct->Leg_Right.Total_Angle_Target = Chassis_Control_Struct->Leg_Right.Total_Angle_Feedback;
+    }
+    
+/*===| INS数据赋值 |===*/
+/* @note 统一走 INS_Chassis_Data 中间层:Down(G474) 与 MC02(H723) 的 IMU 贴装方向不同,
+ * @note Down 在 INS_Task 里做了 180° 轴变换(xb'=-yb, yb'=-xb, zb'=-zb),MC02 没做,
+ * @note 所以极性换算集中在 INS_Chassis_Data.c 的 SIGN 宏里,这里只按"底盘坐标系"取值。 */
+    State_Filter(Chassis_Control_Struct,INS_Chassis_Data.Acceleration_Z);
+    Chassis_Control_Struct->Chassis_Control.Acceleration_Y = INS_Chassis_Data.Acceleration_Y;
+    Chassis_Control_Struct->Chassis_Control.Pitch_Last  = Chassis_Control_Struct->Chassis_Control.Pitch;
+    Chassis_Control_Struct->Chassis_Control.Pitch       = INS_Chassis_Data.Pitch;
+    Chassis_Control_Struct->Chassis_Control.Pitch_dot   = (Chassis_Control_Struct->Chassis_Control.Pitch-Chassis_Control_Struct->Chassis_Control.Pitch_Last)/Chassis_Control_Struct->Chassis_Dt;
+    Chassis_Control_Struct->Chassis_Control.Roll_Last  = Chassis_Control_Struct->Chassis_Control.Roll;
+    Chassis_Control_Struct->Chassis_Control.Roll       = INS_Chassis_Data.Roll;
+    Chassis_Control_Struct->Chassis_Control.Roll_dot   = (Chassis_Control_Struct->Chassis_Control.Roll-Chassis_Control_Struct->Chassis_Control.Roll_Last)/Chassis_Control_Struct->Chassis_Dt;
+    Chassis_Control_Struct->Chassis_Control.Yaw_Speed   = INS_Chassis_Data.Yaw_Speed;
+}
+
+
+void State_Filter(Chassis_Control_StructTypedef *Chassis_Control_Struct, float INS_MotionAccel_n_Z)
+{
+////	Chassis_Control_Struct.Left_Leg_Angle_dot_last  = Filter_Left_Leg_Angle_dot;
+////	Chassis_Control_Struct.Right_Leg_Angle_dot_last = Filter_Right_Leg_Angle_dot;
+////	Chassis_Control_Struct.Pitch_Speed_fdb_last		= Filter_Pitch_Speed_fdb;
+////	Chassis_Control_Struct.Volecity_Fdb_last		= Filter_Volecity_Fdb;
+	
+////	Filter_Left_Leg_Angle_dot  = K_Lowpass_fliter*Chassis_Control_Struct.Left_Leg_Angle_dot  + (1.0f-K_Lowpass_fliter)*Chassis_Control_Struct.Left_Leg_Angle_dot_last;
+////	Filter_Right_Leg_Angle_dot = K_Lowpass_fliter*Chassis_Control_Struct.Right_Leg_Angle_dot + (1.0f-K_Lowpass_fliter)*Chassis_Control_Struct.Right_Leg_Angle_dot_last;
+////	Filter_Pitch_Speed_fdb     = K_Lowpass_fliter*Chassis_Control_Struct.Pitch_Speed_fdb     + (1.0f-K_Lowpass_fliter)*Chassis_Control_Struct.Pitch_Speed_fdb_last;
+////	Filter_Volecity_Fdb		   = K_Lowpass_fliter*Chassis_Control_Struct.Volecity_Fdb        + (1.0f-K_Lowpass_fliter)*Chassis_Control_Struct.Volecity_Fdb_last;
+	
+    static float MotionAccel_n_Z_last = 0.0f, Filter_MotionAccel_n_Z =0.0f;
+	MotionAccel_n_Z_last = Filter_MotionAccel_n_Z;
+
+//================== Z轴加速度：中值滤波(去毛刺) + 低通滤波(去波动) ==================
+	static float z_buf[3] = {0.0f, 0.0f, 0.0f}; // 存储3次原始数据
+	static uint8_t z_idx = 0;
+	static uint8_t z_init_cnt = 0;
+	float Median_MotionAccel_n_Z;
+	float z_a, z_b, z_c;
+
+	// 1. 更新滑动窗口
+	z_buf[z_idx] = INS_MotionAccel_n_Z;
+	z_idx++;
+	if(z_idx >= 3) z_idx = 0;
+
+	// 2. 启动保护：前3次直接透传，防止初始0.0f污染中值
+	if(z_init_cnt < 3) 
+	{
+		Median_MotionAccel_n_Z = INS_MotionAccel_n_Z;
+		z_init_cnt++;
+	}
+	else 
+	{
+		// 3. 提取窗口数据
+		z_a = z_buf[0];
+		z_b = z_buf[1];
+		z_c = z_buf[2];
+
+		// 4. 纯逻辑判断求中值（无排序、无额外函数调用，最高效）
+		if (z_a > z_b) 
+		{
+			if (z_b > z_c) Median_MotionAccel_n_Z = z_b;
+			else if (z_a > z_c) Median_MotionAccel_n_Z = z_c;
+			else Median_MotionAccel_n_Z = z_a;
+		} 
+		else 
+		{
+			if (z_a > z_c) Median_MotionAccel_n_Z = z_a;
+			else if (z_b > z_c) Median_MotionAccel_n_Z = z_c;
+			else Median_MotionAccel_n_Z = z_b;
+		}
+	}
+
+	// 5. 一阶低通滤波（输入源从原始数据改为中值数据）
+	Filter_MotionAccel_n_Z = 0.05f * Median_MotionAccel_n_Z + 0.95f * MotionAccel_n_Z_last;//中值滤波+低通滤波
+//	Filter_MotionAccel_n_Z = Median_MotionAccel_n_Z;//中值滤波
+//	Filter_MotionAccel_n_Z = K_Lowpass_fliter*INS_MotionAccel_Z + (1.0f-K_Lowpass_fliter)*MotionAccel_n_Z_last;//低通滤波
+	
+	Chassis_Control_Struct->Chassis_Control.Acceleration_Z = Filter_MotionAccel_n_Z;
+//=========================================================================
+}

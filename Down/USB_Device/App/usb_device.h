@@ -2,12 +2,12 @@
 /**
   ******************************************************************************
   * @file           : usb_device.h
-  * @version        : v3.0_Cube
+  * @version        : v1.0_Cube
   * @brief          : Header for usb_device.c file.
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2024 STMicroelectronics.
+  * Copyright (c) 2026 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -27,8 +27,8 @@
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32g4xx.h"
-#include "stm32g4xx_hal.h"
+#include "stm32h7xx.h"
+#include "stm32h7xx_hal.h"
 #include "usbd_def.h"
 
 /* USER CODE BEGIN INCLUDE */
@@ -75,7 +75,7 @@
   */
 
 /** USB Device initialization function. */
-void MX_USB_Device_Init(void);
+void MX_USB_DEVICE_Init(void);
 
 /*
  * -- Insert functions declaration here --
@@ -100,4 +100,3 @@ void MX_USB_Device_Init(void);
 #endif
 
 #endif /* __USB_DEVICE__H__ */
-
