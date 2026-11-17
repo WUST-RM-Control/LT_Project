@@ -7,13 +7,12 @@
 //Chassis_Smooth_Restand_Fun翻倒自起函数相关宏定义
 #define Chassis_Recover_Angle_Speed 			125.0f		//翻倒回正摆角速度(°/s)
 #define Chassis_RESET_Slow_Frist_Angle_Speed 	200.0f		//缓倒地自起只动摆角时速度(°/s)
-//保持比例200:1左右(收腿的前中段恰好不碰地，后段碰地)
-//激进参数，请确保电池电量在一格及以上或有缓冲电容
+//保持比例180:1(收腿的前中段恰好不碰地，后段碰地)
 #define Chassis_RESET_Slow_Second_Angle_Speed 	100.0f		//缓倒地自起收腿时摆角速度(°/s)
 #define Chassis_RESET_Slow_Second_Link_Speed 	0.4f		//缓倒地自起收腿时腿长速度(m/s)
-// //保守参数
-// #define Chassis_RESET_Slow_Second_Angle_Speed 	60.0f		//缓倒地自起收腿时摆角速度(°/s)
-// #define Chassis_RESET_Slow_Second_Link_Speed 	0.3f		//缓倒地自起收腿时腿长速度(m/s)
+//保持比例250:1(收腿的前中段恰好不碰地，后段碰地)
+// #define Chassis_RESET_Slow_Second_Angle_Speed 	175.0f		//缓倒地自起收腿时摆角速度(°/s)
+// #define Chassis_RESET_Slow_Second
 //最终角度和LQR稳定后的腿摆角相同
 #define Chassis_RESET_Slow_Second_L_Total_End 	0.0f		//缓倒地自起收腿时目标总摆角(°)
 #define Chassis_RESET_Slow_Second_R_Total_End 	0.0f		//缓倒地自起收腿时目标总摆角(°)
@@ -51,7 +50,7 @@ const float Chassis_Jump_Fold_Tick   = 0.08f;
 const float Chassis_Jump_Air_Torque_K = 0.25f;
 
 //Chassis_Up_Step_Fun上台阶函数相关宏定义
-//腿摆角θ = 腿相对世界竖直的摆角(°),与LQR状态量State[1]、State[7]一致,双腿后摆θ为正
+//腿摆角θ = 腿相对世界竖直的摆角(°),换算rad后对应十状态LQR的State[4]、State[6],双腿后摆θ为正
 //磕碰检测阈值(需根据当前车辆LQR参数反映出的关节软硬实际调节)
 #define Chassis_Up_Step_Angle_Gate 			14.0f		//双腿摆角检测阈值(°)
 #define Chassis_Up_Step_Angle_Speed_Gate 	90.0f		//双腿摆角速度检测阈值(°/s)
@@ -211,7 +210,7 @@ int8_t Chassis_Smooth_Restand_Fun(Chassis_Control_StructTypedef *Chassis_Control
 		//Pitch：机体正置-25~25，翻倒：>100||<-100，其他区间：不稳定平衡姿态
 		if(fabsf(Chassis_Control->Chassis_Control.Pitch)<25.0f)
 		{
-            if(Chassis_RESET_Slow_FLag_Return !=0 )
+            if(Chassis_RESET_Slow_FLag_Return ==1 )
             {
                 Chassis_Return = Chassis_RESET_Slow;
                 Chassis_RESET_Slow_FLag_Return = 2;
@@ -286,8 +285,7 @@ int8_t Chassis_Smooth_Restand_Fun(Chassis_Control_StructTypedef *Chassis_Control
 		&& fabsf(L_Angle_Err)  < 5.0f
 		&& fabsf(R_Angle_Err)  < 5.0f
 		&& fabsf(L_Length_Err) < 0.04f
-		&& fabsf(R_Length_Err) < 0.04f
-        && Chassis_Control->Chassis_Control.Leg_Length_Target - Leg_Length_Min<0.01)
+		&& fabsf(R_Length_Err) < 0.04f)
 		{
 			/*===| 收腿完成:允许站立 |===*/
 			Chassis_Return = Chassis_FOLLOW;
@@ -361,7 +359,7 @@ int8_t Chassis_Smooth_Restand_Fun(Chassis_Control_StructTypedef *Chassis_Control
  * @attention 仅在底盘平衡状态(Chassis_FOLLOW、Chassis_SPIN)下检测,跳跃、磕台阶、失能、倒地时不检测
  * 
  * @note 参数注意：
- * @note 腿摆角θ取腿相对世界竖直的摆角(rad),与LQR状态量State[1]、State[7]一致
+ * @note 腿摆角θ取腿相对世界竖直的摆角(rad),与十状态LQR的State[4]、State[6]一致
  * @note 沿杆的力伸腿方向为正方向,摆角力矩左(右)腿从左(右)看逆时针为正方向
  * @note Pitch范围:-180~180度,车水平正置时Pitch为0度(腿摆角计算与LQR一样带2.5°安装偏置)
  * 
@@ -407,7 +405,7 @@ int8_t Chassis_Off_Ground_Fun(Chassis_Control_StructTypedef *Chassis_Control_Str
         return 0;
     }
 
-    /*===| 腿相对世界竖直的摆角(rad),与LQR状态量State[1]、State[7]保持一致 |===*/
+    /*===| 腿相对世界竖直的摆角(rad),与十状态LQR的State[4]、State[6]保持一致 |===*/
     const float L_theta = ( Chassis_Control_Struct->Leg_Left.Angle_Feedback  - (Chassis_Control_Struct->Chassis_Control.Pitch))*Angle2Radain;
     const float R_theta = (-Chassis_Control_Struct->Leg_Right.Angle_Feedback - (Chassis_Control_Struct->Chassis_Control.Pitch))*Angle2Radain;
 
@@ -545,8 +543,6 @@ int8_t Chassis_Jump_Fun(Chassis_Control_StructTypedef *Chassis_Control_Struct)
     /*===| 子状态1:降腿蓄力 |===*/
     if(Chassis_Control_Struct->WheelLeg_Control_Flag.Chassis_Jump_FLag == 1&&Chassis_Control_Struct->Chassis_Control.Chassis_State == Chassis_Jump)
     {
-        // Chassis_Control_Struct->Leg_Left.Total_Angle_Target = Chassis_Control_Struct->Leg_Left.Total_Angle_Feedback + Caculate_Included_Angle(Chassis_Control_Struct->Leg_Left.Total_Angle_Feedback, 90.0f);
-        // Chassis_Control_Struct->Leg_Right.Total_Angle_Target = Chassis_Control_Struct->Leg_Right.Total_Angle_Feedback + Caculate_Included_Angle(Chassis_Control_Struct->Leg_Right.Total_Angle_Feedback, -90.0f);
         //腿长目标压至最短
         Chassis_Control_Struct->Chassis_Control.Leg_Length_Target = Leg_Length_Min;
 
@@ -573,8 +569,6 @@ int8_t Chassis_Jump_Fun(Chassis_Control_StructTypedef *Chassis_Control_Struct)
     /*===| 子状态2:全力蹬腿 |===*/
     else if(Chassis_Control_Struct->WheelLeg_Control_Flag.Chassis_Jump_FLag == 2&&Chassis_Control_Struct->Chassis_Control.Chassis_State == Chassis_Jump)
     {
-        // Chassis_Control_Struct->Leg_Left.Total_Angle_Target = Chassis_Control_Struct->Leg_Left.Total_Angle_Feedback + Caculate_Included_Angle(Chassis_Control_Struct->Leg_Left.Total_Angle_Feedback, 90.0f);
-        // Chassis_Control_Struct->Leg_Right.Total_Angle_Target = Chassis_Control_Struct->Leg_Right.Total_Angle_Feedback + Caculate_Included_Angle(Chassis_Control_Struct->Leg_Right.Total_Angle_Feedback, -90.0f);
         //蹬腿前馈斜坡淡入,避免力突变
         K_slope += Chassis_Jump_Push_Slope_Up * Chassis_Control_Struct->Chassis_Dt;
         Limit_float(&K_slope,1.0f,0.0f);
@@ -635,7 +629,6 @@ int8_t Chassis_Jump_Fun(Chassis_Control_StructTypedef *Chassis_Control_Struct)
         }
     }
     /*===| 子状态4:落地缓冲 |===*/
-    //由离地检测执行
     else if(Chassis_Control_Struct->WheelLeg_Control_Flag.Chassis_Jump_FLag == 4&&Chassis_Control_Struct->Chassis_Control.Chassis_State == Chassis_Jump)
     {
         Jump_state_change_Tim = 0.0f;
@@ -652,7 +645,6 @@ int8_t Chassis_Jump_Fun(Chassis_Control_StructTypedef *Chassis_Control_Struct)
         //底盘跟随并清除跳跃进行中标志位
         Chassis_Control_Struct->Chassis_Control.Chassis_State = Chassis_FOLLOW;
         Chassis_Control_Struct->WheelLeg_Control_Flag.Chassis_Jump_FLag = 0;
-        Chassis_Control_Struct->WheelLeg_Control_Flag.Off_ground_Flag = 1;
     }
 	/*===| 子状态0:跳跃完成回到Chassis_FOLLOW或Chassis_Jump_FLag=0 |===*/
 
@@ -667,7 +659,7 @@ int8_t Chassis_Jump_Fun(Chassis_Control_StructTypedef *Chassis_Control_Struct)
  * @attention 必须在WheelLeg_LQR_Output之后、WheelLeg_Output之前调用,否则目标会被覆盖或本周期不生效
  * 
  * @note 参数注意：
- * @note 腿摆角θ = 腿相对世界竖直的摆角(°),与LQR状态量State[1]、State[7]一致,双腿后摆θ为正
+ * @note 腿摆角θ = 腿相对世界竖直的摆角(°),换算rad后对应十状态LQR的State[4]、State[6],双腿后摆θ为正
  * @note 摆角力矩左(右)腿从左(右)看逆时针为正方向,与LQR_Link_Torque_Target[1]同号
  * 
  * @note 判断过程:
@@ -751,7 +743,7 @@ int8_t Chassis_Up_Step_Fun(Chassis_Control_StructTypedef *Chassis_Control_Struct
         return 0;
     }
 
-    /*===| 腿相对世界竖直的摆角(°)与摆角速度(rad/s),与LQR状态量State[1]、State[2]一致 |===*/
+    /*===| 左腿世界摆角/角速度换算rad/rad/s后对应十状态LQR的State[4]、State[5] |===*/
     // const float L_theta = Chassis_Control_Struct->Leg_Left.Angle_Feedback;
     // const float R_theta =-Chassis_Control_Struct->Leg_Right.Angle_Feedback;
     // const float Chassis_Control_Struct->Leg_Left.Total_Angle_Speed = Chassis_Control_Struct->Leg_Left.Total_Angle_Speed;

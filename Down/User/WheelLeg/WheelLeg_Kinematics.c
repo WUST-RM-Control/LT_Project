@@ -226,8 +226,8 @@ static void WheelLeg_ForwardKinematics(WheelLeg_LegKinematics_StructTypedef *Leg
         phi4 = Joint_Angle_23;
     }
 
-	PHI1 = phi1 * Angle2Radain;
-	PHI4 = phi4 * Angle2Radain;
+	PHI1 = phi1 * Angle_to_Radain;
+	PHI4 = phi4 * Angle_to_Radain;
 	
 	Xb = L1*arm_cos_f32(PHI1);
 	Yb = L1*arm_sin_f32(PHI1);
@@ -247,7 +247,7 @@ static void WheelLeg_ForwardKinematics(WheelLeg_LegKinematics_StructTypedef *Leg
 
 	L0=sqrt((Xc-L5/2)*(Xc-L5/2)+Yc*Yc);
 	PHI0=atan2f(Yc,(Xc-L5/2));
-	phi0=PHI0*Radain2Angle;
+	phi0=PHI0*Radain_to_Angle;
 	
 
 

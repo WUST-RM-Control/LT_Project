@@ -31,6 +31,8 @@ static uint32_t WheelLeg_SpringComp_CRC32(const uint8_t *Data, uint32_t Len);
 #define Point_Num 1024
 
 //解算有关定义
+#define Angle_to_Radain	 0.0174533f //角度to弧度(PI/180)
+#define	Radain_to_Angle	 57.29578f  //弧度to角度(180/PI)
 #define L1_UP    0.21    //大腿长度m
 #define L2_Down  0.25    //小腿长度m
 
@@ -524,8 +526,8 @@ static void Leg_Date_Compensation_Calculate(Motor_Compensation_Config_StructType
 	}
 	
 
-	PHI1 = phi1 * Angle2Radain;
-	PHI4 = phi4 * Angle2Radain;
+	PHI1 = phi1 * Angle_to_Radain;
+	PHI4 = phi4 * Angle_to_Radain;
 	
 	Xb = L1_UP*arm_cos_f32(PHI1);
 	Yb = L1_UP*arm_sin_f32(PHI1);
@@ -545,7 +547,7 @@ static void Leg_Date_Compensation_Calculate(Motor_Compensation_Config_StructType
 
 	L0=sqrtf((Xc-l5/2)*(Xc-l5/2)+Yc*Yc);
 	PHI0=atan2f(Yc,(Xc-l5/2));
-	phi0=PHI0*Radain2Angle;
+	phi0=PHI0*Radain_to_Angle;
 	
 
 	//Last数据赋值

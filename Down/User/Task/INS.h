@@ -24,9 +24,8 @@
 /* ====| IMU 加热总开关 |====
  * DM_MC02 板上 IMU 加热由 TIM3_CH4 驱动, 抬的是 24V 电源, 误开有烧板风险,
  * 因此默认关闭(0): INS_Init() 不再启动 TIM3 的 PWM, IMU_Temperature_Ctrl()
- * 即使被调用也不会输出占空比。确认硬件无误、确实需要恒温时再改成 1。 
- * 正常测试一定要关闭，在Dubeg的断点会导致程序卡死持续加热然后喵板烧毁！！！*/
-#define INS_HEAT_ENABLE 0
+ * 即使被调用也不会输出占空比。确认硬件无误、确实需要恒温时再改成 1。 */
+#define INS_HEAT_ENABLE 1
 //不想冒烟就别开超过1000
 #define IMU_Heat_TIM_CRR_Lmit 600
 // uint16_t IMU_Heat_TIM_CRR_Lmit=800;

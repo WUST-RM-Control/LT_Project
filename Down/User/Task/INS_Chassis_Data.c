@@ -20,6 +20,8 @@
  */
 #include "INS_Chassis_Data.h"
 #include "INS.h"
+#include "QuaternionEKF.h"
+#include <math.h>
 
 INS_Chassis_Data_StructTypedef INS_Chassis_Data;
 
@@ -36,7 +38,6 @@ INS_Chassis_Data_StructTypedef INS_Chassis_Data;
 #define INS_CHASSIS_ROLL_SIGN         (+1.0f)   // 右侧抬起为正
 #define INS_CHASSIS_YAW_SIGN          (+1.0f)   // 俯视逆时针为正
 #define INS_CHASSIS_YAW_SPEED_SIGN    (+1.0f)   // 俯视逆时针为正
-#define INS_CHASSIS_Roll_SPEED_SIGN   (+1.0f)   // 俯视逆时针为正
 #define INS_CHASSIS_ACC_Y_SIGN        (-1.0f)   // 向前加速为正
 #define INS_CHASSIS_ACC_Z_SIGN        (+1.0f)   // 向上加速为正
 
@@ -51,8 +52,8 @@ INS_Chassis_Data_StructTypedef INS_Chassis_Data;
  * @note   怎么标定(车静止, 底盘放在水平台上, 车头方向摆正):
  * @note     1. 读显示值 Pitch / Roll, 把读到的数原样填进下面两个宏(带正负号);
  * @note     2. 重烧后应读到 ≈0.0°;若反而变成两倍, 说明符号填反了, 取负即可;
- * @note     3. Yaw 没有绝对基准, 不对准也无所谓 —— 轮腿底盘不用绝对航向,
- * @note        只有 Yaw_Speed 参与运算, 所以 Yaw 偏置填 0 也可以。
+ * @note     3. Yaw 没有固定绝对基准,LQR进入时捕获当前连续航向作参考,
+ * @note        连续航向和角速度都参与控制,这里不额外扣除Yaw偏置。
  * 
  * @note   注意:
  * @note   这里只补偿"角度", 不动 Acceleration_Y/Z。1° 倾斜对水平加速度的影响
@@ -95,12 +96,21 @@ static float INS_Chassis_Wrap_Angle(float Angle)
 void INS_Chassis_Data_Update(void)
 {
     INS_Chassis_Data.Pitch          = INS_CHASSIS_PITCH_SIGN     * INS.Pitch;
+    // 沿用原工程X轴映射,此处与Pitch同向;LQR取负后等价于BodyPitchRate。
+    INS_Chassis_Data.Pitch_dot      = INS_CHASSIS_PITCH_SIGN     * INS.Gyro[X] * Radain2Angle;
     INS_Chassis_Data.Roll           = INS_CHASSIS_ROLL_SIGN      * INS.Roll;
     INS_Chassis_Data.Yaw            = INS_CHASSIS_YAW_SIGN       * INS.Yaw;
+    INS_Chassis_Data.YawTotalAngle  = INS_CHASSIS_YAW_SIGN       * INS.YawTotalAngle;
     INS_Chassis_Data.Yaw_Speed      = INS_CHASSIS_YAW_SPEED_SIGN * INS.Gyro[Z];
-    INS_Chassis_Data.Roll_Speed     = INS_CHASSIS_Roll_SPEED_SIGN* INS.Gyro[Y]*Radain2Angle;
     INS_Chassis_Data.Acceleration_Y = INS_CHASSIS_ACC_Y_SIGN     * INS.MotionAccel_n[1];
     INS_Chassis_Data.Acceleration_Z = INS_CHASSIS_ACC_Z_SIGN     * INS.MotionAccel_n[2];
+
+    INS_Chassis_Data.Count++;
+    INS_Chassis_Data.If_Ready = 0;
+    if(QEKF_INS.UpdateCount == 0U || !isfinite(INS_Chassis_Data.Pitch) ||
+       !isfinite(INS_Chassis_Data.Pitch_dot) || !isfinite(INS_Chassis_Data.Roll) ||
+       !isfinite(INS_Chassis_Data.Yaw) || !isfinite(INS_Chassis_Data.YawTotalAngle) ||
+       !isfinite(INS_Chassis_Data.Yaw_Speed)) return;
 
 #if (INS_CHASSIS_MOUNT_ENABLE)
     // 装配误差补偿: 减掉"放平时本来就有的读数", 让水平姿态真的输出 0
@@ -110,8 +120,6 @@ void INS_Chassis_Data_Update(void)
     // INS_Chassis_Data.Yaw   = INS_Chassis_Wrap_Angle(INS_Chassis_Data.Yaw - INS_CHASSIS_MOUNT_YAW_DEG);
 #endif
 
-    // INS_Chassis_Data.Count++;
-    // // 收到过数据即认为姿态可用:DM_MC02 的 INS 是板载 BMI088+EKF,不存在 Down 那种"外部 IMU 掉线"状态,
-    // // 这里用"是否已经跑过更新"代替 Down 的 INS_Data_Gimbal.If_INS_Init
-    // INS_Chassis_Data.If_Ready = 1;
+    // 与原工程一致:EKF已更新且姿态数据有限,才允许LQR使用。
+    INS_Chassis_Data.If_Ready = 1;
 }

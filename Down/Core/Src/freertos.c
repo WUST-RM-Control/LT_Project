@@ -53,8 +53,8 @@ typedef StaticTask_t osStaticThreadDef_t;
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
-  .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityNormal7,
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for Key */
 osThreadId_t KeyHandle;
@@ -78,28 +78,28 @@ const osThreadAttr_t INS_attributes = {
   .cb_size = sizeof(ImuTaskControlBlock),
   .stack_mem = &ImuTaskBuffer[0],
   .stack_size = sizeof(ImuTaskBuffer),
-  .priority = (osPriority_t) osPriorityNormal7,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for Robo */
 osThreadId_t RoboHandle;
 const osThreadAttr_t Robo_attributes = {
   .name = "Robo",
   .stack_size = 512 * 4,
-  .priority = (osPriority_t) osPriorityNormal4,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for Chassis */
 osThreadId_t ChassisHandle;
 const osThreadAttr_t Chassis_attributes = {
   .name = "Chassis",
-  .stack_size = 2048 * 4,
-  .priority = (osPriority_t) osPriorityNormal6,
+  .stack_size = 1024 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for ErrorHandle */
 osThreadId_t ErrorHandleHandle;
 const osThreadAttr_t ErrorHandle_attributes = {
   .name = "ErrorHandle",
   .stack_size = 512 * 4,
-  .priority = (osPriority_t) osPriorityNormal5,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for Buzzer */
 osThreadId_t BuzzerHandle;
@@ -113,7 +113,7 @@ osThreadId_t CommunicateHandle;
 const osThreadAttr_t Communicate_attributes = {
   .name = "Communicate",
   .stack_size = 512 * 4,
-  .priority = (osPriority_t) osPriorityNormal4,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for UI */
 osThreadId_t UIHandle;
@@ -368,8 +368,8 @@ __weak void UI_Task(void *argument)
   osDelay(1000);
   for(;;)
   {
-    VOFA_JustFloat_Send(&huart1);
-    osDelay(5);
+    // 调试串口由Chassis_Task末尾统一DMA发送,此处不再发送。
+    osDelay(1000);
   }
   /* USER CODE END UI_Task */
 }

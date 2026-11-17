@@ -57,8 +57,6 @@ typedef enum
 /*===| 对底盘状态的详细描述Flag |===*/
 typedef struct
 {
-	//清零标志位
-	uint8_t Chassis_Flag_Reset;
 
     //倒地缓自起(PID自起)
     //0：非倒地自起状态或标志位赋值完成
@@ -103,8 +101,8 @@ typedef struct
 		float Roll;				//角度.左腿抬高增大
 		float Roll_dot;			//角度
 		float Roll_Last;		//角度
-		float Pitch;			//角度,LQR使用的pitch*Angle2Radain,车头抬高pitch增大
-		float Pitch_dot;		//角度
+		float Pitch;			//度,抬头为正;十状态LQR使用-Pitch*Angle2Radain
+		float Pitch_dot;		//度/s,保留角度差分值,十状态LQR使用IMU中间层角速度
 		float Pitch_Last;		//角度
 		float Yaw_Speed;		//弧度/s，俯视逆时针为正方向，用于转向和小陀螺
 								//INS.Gyro[Z]角速度，rad/s

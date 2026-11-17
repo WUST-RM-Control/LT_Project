@@ -41,6 +41,251 @@ Chassis_Control_StructTypedef Chassis_Control_Struct =
     .Leg_Right.Leg_LR = Leg_R
 };
 
+// 左右轮速度Kalman滤波器
+extern KalmanFilter_t L_vaEstimateKF;
+extern KalmanFilter_t R_vaEstimateKF;
+
+// 在控制、VMC和电机输出结束后统一组帧,由VOFA层启动DMA。
+
+static void Chassis_Send_Debug_Data(
+    const Chassis_Control_StructTypedef *Chassis_Control
+)
+{
+    float wheel_left_cmd = 0.0f;
+    float wheel_right_cmd = 0.0f;
+
+    // 读取后级最终轮电机命令
+    WheelLeg_Output_GetWheelDebug(
+        &wheel_left_cmd,
+        &wheel_right_cmd
+    );
+
+    // ========================================================
+    // CH0~CH3：控制周期及速度目标
+    // ========================================================
+
+    // CH0：实际底盘控制周期，ms
+    VOFA_JustFloat_AddValue(
+        0, Chassis_Control->Chassis_Dt * 1000.0f
+    );
+
+    // CH1：当前底盘控制模式
+    VOFA_JustFloat_AddValue(
+        1,
+        (float)Chassis_Control->Chassis_Control.Chassis_State
+    );
+
+    // CH2：经过RoboControl滤波的速度目标，m/s
+    VOFA_JustFloat_AddValue(
+        2, Chassis_Control->Chassis_Control.Vy_Target
+    );
+
+    // CH3：经过加减速斜坡后的LQR速度目标，m/s
+    VOFA_JustFloat_AddValue(
+        3, WheelLeg_LQR_Struct.Wheel_Speed_Target
+    );
+
+    // ========================================================
+    // CH4~CH11：轮速及Kalman
+    // ========================================================
+
+    // CH4：左轮原始速度，m/s
+    VOFA_JustFloat_AddValue(
+        4, Wheel_Left.Wheel_Speed_Feedback
+    );
+
+    // CH5：右轮原始速度，m/s
+    VOFA_JustFloat_AddValue(
+        5, Wheel_Right.Wheel_Speed_Feedback
+    );
+
+    // CH6：左轮Kalman估计速度，m/s
+    VOFA_JustFloat_AddValue(
+        6, L_vaEstimateKF.FilteredValue[0]
+    );
+
+    // CH7：右轮Kalman估计速度，m/s
+    VOFA_JustFloat_AddValue(
+        7, R_vaEstimateKF.FilteredValue[0]
+    );
+
+    // CH8：进入LQR的融合速度反馈，m/s
+    VOFA_JustFloat_AddValue(
+        8, WheelLeg_LQR_Struct.Wheel_Speed_Feedback
+    );
+
+    // CH9：IMU纵向加速度，m/s²
+    VOFA_JustFloat_AddValue(
+        9, Chassis_Control->Chassis_Control.Acceleration_Y
+    );
+
+    // CH10：左轮Kalman加速度状态，m/s²
+    VOFA_JustFloat_AddValue(
+        10, L_vaEstimateKF.FilteredValue[1]
+    );
+
+    // CH11：右轮Kalman加速度状态，m/s²
+    VOFA_JustFloat_AddValue(
+        11, R_vaEstimateKF.FilteredValue[1]
+    );
+
+    // ========================================================
+    // CH12~CH15：位移与速度误差
+    // ========================================================
+
+    // CH12：目标位移，m
+    VOFA_JustFloat_AddValue(
+        12,
+        WheelLeg_LQR_Struct.Target[WHEELLEG_LQR_STATE_S]
+    );
+
+    // CH13：实际位移，m
+    VOFA_JustFloat_AddValue(
+        13,
+        WheelLeg_LQR_Struct.State[WHEELLEG_LQR_STATE_S]
+    );
+
+    // CH14：位移误差，m
+    VOFA_JustFloat_AddValue(
+        14,
+        WheelLeg_LQR_Struct.Error[WHEELLEG_LQR_STATE_S]
+    );
+
+    // CH15：速度误差，m/s
+    VOFA_JustFloat_AddValue(
+        15,
+        WheelLeg_LQR_Struct.Error[WHEELLEG_LQR_STATE_S_DOT]
+    );
+
+    // ========================================================
+    // CH16~CH19：Pitch和腿摆角
+    // ========================================================
+
+    // CH16：Pitch角度，rad
+    VOFA_JustFloat_AddValue(
+        16,
+        WheelLeg_LQR_Struct.State[WHEELLEG_LQR_STATE_BODY_PITCH]
+    );
+
+    // CH17：Pitch角速度，rad/s
+    VOFA_JustFloat_AddValue(
+        17,
+        WheelLeg_LQR_Struct.State[WHEELLEG_LQR_STATE_BODY_PITCH_DOT]
+    );
+
+    // CH18：左腿世界摆角，rad
+    VOFA_JustFloat_AddValue(
+        18,
+        WheelLeg_LQR_Struct.State[WHEELLEG_LQR_STATE_LEFT_LEG]
+    );
+
+    // CH19：右腿世界摆角，rad
+    VOFA_JustFloat_AddValue(
+        19,
+        WheelLeg_LQR_Struct.State[WHEELLEG_LQR_STATE_RIGHT_LEG]
+    );
+
+    // ========================================================
+    // CH20~CH25：轮端控制输出
+    // ========================================================
+
+    // CH20：左轮LQR原始力矩，N·m
+    VOFA_JustFloat_AddValue(
+        20,
+        WheelLeg_LQR_Struct.LQR_Output[
+            WHEELLEG_LQR_OUTPUT_LEFT_WHEEL
+        ]
+    );
+
+    // CH21：右轮LQR原始力矩，N·m
+    VOFA_JustFloat_AddValue(
+        21,
+        WheelLeg_LQR_Struct.LQR_Output[
+            WHEELLEG_LQR_OUTPUT_RIGHT_WHEEL
+        ]
+    );
+
+    // CH22：左轮方向映射及限幅后力矩，N·m
+    VOFA_JustFloat_AddValue(
+        22, Chassis_Control->Leg_Left.LQR_Wheel_Torque_Target
+    );
+
+    // CH23：右轮方向映射及限幅后力矩，N·m
+    VOFA_JustFloat_AddValue(
+        23, Chassis_Control->Leg_Right.LQR_Wheel_Torque_Target
+    );
+
+    // CH24：左轮后级发送命令
+    VOFA_JustFloat_AddValue(
+        24, wheel_left_cmd
+    );
+
+    // CH25：右轮后级发送命令
+    VOFA_JustFloat_AddValue(
+        25, wheel_right_cmd
+    );
+
+    // ========================================================
+    // CH26~CH31：离地、有效性和左右差异
+    // ========================================================
+
+    // CH26：整车离地标志
+    VOFA_JustFloat_AddValue(
+        26,
+        (float)Chassis_Control->WheelLeg_Control_Flag.Off_ground_Flag
+    );
+
+    // CH27：LQR计算有效标志
+    VOFA_JustFloat_AddValue(
+        27, (float)WheelLeg_LQR_Struct.Valid
+    );
+
+    // CH28：左右原始轮速差，m/s
+    VOFA_JustFloat_AddValue(
+        28,
+        Wheel_Left.Wheel_Speed_Feedback
+        - Wheel_Right.Wheel_Speed_Feedback
+    );
+
+    // CH29：Yaw角速度，rad/s
+    VOFA_JustFloat_AddValue(
+        29,
+        WheelLeg_LQR_Struct.State[WHEELLEG_LQR_STATE_YAW_DOT]
+    );
+
+    // CH30：左腿长度，m
+    VOFA_JustFloat_AddValue(
+        30, Chassis_Control->Leg_Left.Length_Feedback
+    );
+
+    // CH31：右腿长度，m
+    VOFA_JustFloat_AddValue(
+        31, Chassis_Control->Leg_Right.Length_Feedback
+    );
+
+    // ========================================================
+    // DMA发送
+    // ========================================================
+
+    // 沿用已有5ms发送节流，不阻塞底盘任务
+    VOFA_JustFloat_Send(&huart1);
+}
+
+
+// void WheelLeg_Output_Motor_Send_Current
+// (const float Joint1, 
+// const float Joint2, 
+// const float Joint3, 
+// const float Joint4, 
+// const float Wheel_Left,
+// const float Wheel_Right)
+// {
+//     Motor_DM_CMD_MIT(&Chassis_JointMotor1_CAN, Chassis_JointMotor1_Send_CAN_ID, 0, 0, 0, 0, Joint1);
+//     Motor_DM_CMD_MIT(&Chassis_JointMotor2_CAN, Chassis_JointMotor2_Send_CAN_ID, 0, 0, 0, 0, Joint2);
+//     Motor_DM_CMD_MIT(&Chassis_JointMotor3_CAN, Chassis_JointMotor3_Send_CAN_ID, 0, 0, 0, 0, Joint3);
+//     Motor_DM_CMD_MIT(&Chassis_JointMotor4_CAN, Chassis_JointMotor4_Send_CAN_ID, 0, 0, 0, 0, Joint4);
+//     Motor_DJI_SendCurrent(&Chassis_DriverMotor_CAN,Chassis_DriverMotor_Send_CAN_ID,0,0,Wheel_Left,Wheel_Right);
+// }
 void Chassis_Task(void const * argument)
 {
 	osDelay(100);
@@ -73,11 +318,10 @@ void Chassis_Task(void const * argument)
         /*===| 获得外部数据 |===*/
         Get_Control_Data(&Chassis_Control_Struct);
         
-        VOFA_JustFloat_AddValue(0,Chassis_Control_Struct.Chassis_Control.Chassis_State);
-        VOFA_JustFloat_AddValue(1,INS_Chassis_Data.Roll);
-        VOFA_JustFloat_AddValue(2,INS_Chassis_Data.Pitch);
-        VOFA_JustFloat_AddValue(3,INS_Chassis_Data.Yaw);
-        VOFA_JustFloat_AddValue(4,Chassis_Control_Struct.Chassis_Dt);
+        // VOFA_JustFloat_AddValue(0,Chassis_Control_Struct.Chassis_Control.Chassis_State);
+        // VOFA_JustFloat_AddValue(1,INS_Chassis_Data.Roll);
+        // VOFA_JustFloat_AddValue(2,INS_Chassis_Data.Pitch);
+        // VOFA_JustFloat_AddValue(3,INS_Chassis_Data.Yaw);
         /*===| 底盘运动学解算 |===*/
         WheelLeg_Kinematics_Update(&Chassis_Control_Struct);
 
@@ -117,6 +361,9 @@ void Chassis_Task(void const * argument)
 
         /*===| 错误状态检测(离地) |===*/
         Chassis_Off_Ground_Fun(&Chassis_Control_Struct);
+
+        /*===| 调试串口统一DMA发送,5ms节流,忙时直接跳过 |===*/
+        Chassis_Send_Debug_Data(&Chassis_Control_Struct);
         
         osDelay(1);
     }
@@ -148,26 +395,17 @@ void Get_Control_Data(Chassis_Control_StructTypedef *Chassis_Control_Struct)
         RoboControl_State_Last = RoboControl_Struct.Chassis_State;
     }
     //标志位状态赋值
-    if(RoboControl_Struct.Chassis_Control_Flag.Chassis_Flag_Reset == 1)
-    {
-        RoboControl_Struct.Chassis_Control_Flag.Chassis_Flag_Reset = 0;
-        Chassis_Control_Struct->WheelLeg_Control_Flag.Chassis_Flag_Reset = 0;
-        Chassis_Control_Struct->WheelLeg_Control_Flag.Chassis_Jump_FLag = 0;
-        Chassis_Control_Struct->WheelLeg_Control_Flag.Chassis_RESET_Slow_FLag = 0;
-        Chassis_Control_Struct->WheelLeg_Control_Flag.Off_ground_Flag = 0;
-        Chassis_Control_Struct->WheelLeg_Control_Flag.Up_Step_Flag = 0;
-    }
-    if(RoboControl_Struct.Chassis_Control_Flag.Chassis_RESET_Slow_FLag&&Chassis_Control_Struct->WheelLeg_Control_Flag.Chassis_RESET_Slow_FLag==0)
+    if(RoboControl_Struct.Chassis_Control_Flag.Chassis_RESET_Slow_FLag)
     {
         Chassis_Control_Struct->WheelLeg_Control_Flag.Chassis_RESET_Slow_FLag = RoboControl_Struct.Chassis_Control_Flag.Chassis_RESET_Slow_FLag;
         RoboControl_Struct.Chassis_Control_Flag.Chassis_RESET_Slow_FLag = 0;
     }
-    if(RoboControl_Struct.Chassis_Control_Flag.Chassis_Jump_FLag&&Chassis_Control_Struct->WheelLeg_Control_Flag.Chassis_Jump_FLag==0)
+    if(RoboControl_Struct.Chassis_Control_Flag.Chassis_Jump_FLag)
     {
         Chassis_Control_Struct->WheelLeg_Control_Flag.Chassis_Jump_FLag = RoboControl_Struct.Chassis_Control_Flag.Chassis_Jump_FLag;
         RoboControl_Struct.Chassis_Control_Flag.Chassis_Jump_FLag = 0;
     }
-    if(RoboControl_Struct.Chassis_Control_Flag.Up_Step_Flag&&Chassis_Control_Struct->WheelLeg_Control_Flag.Up_Step_Flag==0)
+    if(RoboControl_Struct.Chassis_Control_Flag.Up_Step_Flag)
     {
         Chassis_Control_Struct->WheelLeg_Control_Flag.Up_Step_Flag = RoboControl_Struct.Chassis_Control_Flag.Up_Step_Flag;
         RoboControl_Struct.Chassis_Control_Flag.Up_Step_Flag = 0;
@@ -216,7 +454,7 @@ void Get_Control_Data(Chassis_Control_StructTypedef *Chassis_Control_Struct)
     Chassis_Control_Struct->Chassis_Control.Pitch_dot   = (Chassis_Control_Struct->Chassis_Control.Pitch-Chassis_Control_Struct->Chassis_Control.Pitch_Last)/Chassis_Control_Struct->Chassis_Dt;
     Chassis_Control_Struct->Chassis_Control.Roll_Last  = Chassis_Control_Struct->Chassis_Control.Roll;
     Chassis_Control_Struct->Chassis_Control.Roll       = INS_Chassis_Data.Roll;
-    Chassis_Control_Struct->Chassis_Control.Roll_dot   = INS_Chassis_Data.Roll_Speed;
+    Chassis_Control_Struct->Chassis_Control.Roll_dot   = (Chassis_Control_Struct->Chassis_Control.Roll-Chassis_Control_Struct->Chassis_Control.Roll_Last)/Chassis_Control_Struct->Chassis_Dt;
     Chassis_Control_Struct->Chassis_Control.Yaw_Speed   = INS_Chassis_Data.Yaw_Speed;
 }
 

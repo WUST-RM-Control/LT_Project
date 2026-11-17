@@ -78,6 +78,11 @@ void Robo_Task(void *argument)
             Robo_Stop(); 
         }
         
+        // /*===| 自定义功能-左摇杆向上 |===*/
+        // if      (Remote_Control_Struct.RC_Left_Y > 0.8f && Remote_Control_Last_Struct.RC_Left_Y < 0.8f&&Remote_Control_Struct.RC_Side < -0.7f)
+        // {
+        //     RoboControl_Struct.If_SettingZero = 1;//设零点
+        // }
         /*===| 遥控方式 |===*/
         /*===| 遥控器摇杆控制 |===*/
         if(RoboControl_Struct.Controler == Joystick)
@@ -364,12 +369,11 @@ void RemoteControl_Bool(void)
             /*===| 自定义功能-左摇杆向左 |===*/
             else if (Remote_Control_Struct.RC_Left_X < -0.8f && Remote_Control_Last_Struct.RC_Left_X > -0.8f)
             {
-				//手动清零部分功能标志位 避免疯车
-                RoboControl_Struct.Chassis_Control_Flag.Chassis_Flag_Reset = 1;
-                RoboControl_Struct.Chassis_Control_Flag.Chassis_Jump_FLag = 0;
-                RoboControl_Struct.Chassis_Control_Flag.Chassis_RESET_Slow_FLag = 0;
-                RoboControl_Struct.Chassis_Control_Flag.Off_ground_Flag = 0;
-                RoboControl_Struct.Chassis_Control_Flag.Up_Step_Flag = 0;
+				// //手动清零部分功能标志位 避免疯车
+				// Chassis_Control_Struct.Recover_from_ground_Flag = 0;
+				// Chassis_Control_Struct.Jump_Flag = 0;
+				// Chassis_Control_Struct.UpStep_Dect_Flag = 0;
+				// Chassis_Control_Struct.UpStep_Flag = 0;
             }
             /*===| 自定义功能-左摇杆向上 |===*/
             if      (Remote_Control_Struct.RC_Left_Y > 0.8f && Remote_Control_Last_Struct.RC_Left_Y < 0.8f)
@@ -385,11 +389,8 @@ void RemoteControl_Bool(void)
             if      (Remote_Control_Struct.RC_Right_X > 0.8f && Remote_Control_Last_Struct.RC_Right_X < 0.8f)
             {
 				// Chassis_Control_Struct.Jump_Flag = 1;//机器人跳跃功能
-                if(RoboControl_Struct.Chassis_State == Chassis_FOLLOW)
-                {
-                    RoboControl_Struct.Chassis_State = Chassis_Jump;
-                    RoboControl_Struct.Chassis_Control_Flag.Chassis_Jump_FLag = 1;
-                }
+                RoboControl_Struct.Chassis_State = Chassis_Jump;
+                RoboControl_Struct.Chassis_Control_Flag.Chassis_Jump_FLag = 1;
             }
             /*===| 自定义功能-滑轮下滑 右摇杆向左 |===*/
             else if (Remote_Control_Struct.RC_Right_X < -0.8f && Remote_Control_Last_Struct.RC_Right_X > -0.8f)
@@ -408,7 +409,6 @@ void RemoteControl_Bool(void)
             else if (Remote_Control_Struct.RC_Right_Y < -0.8f && Remote_Control_Last_Struct.RC_Right_Y > -0.8f)
             {
                 // Chassis_Control_Struct.Up_Slope_Mode_Flag = 0;
-                // RoboControl_Struct.If_SettingZero = 1;//设零点
             }
 		}
 		 /*===| 开启小陀螺 |===*/
@@ -685,8 +685,8 @@ void Robo_Stop(void)
     //0:缓失能，1:直接失能
 	if(Remote_Control_Struct.S2 == SW_Down)
 	{
-	    // RoboControl_Struct.Chassis_State  = Chassis_OFF_Slow;
-	    RoboControl_Struct.Chassis_State  = Chassis_OFF;
+	    RoboControl_Struct.Chassis_State  = Chassis_OFF_Slow;
+	    // RoboControl_Struct.Chassis_State  = Chassis_OFF;
 	}
 	else
 	{
