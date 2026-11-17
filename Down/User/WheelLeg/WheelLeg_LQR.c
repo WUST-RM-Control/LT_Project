@@ -13,19 +13,19 @@ WheelLeg_LQR_Displacement_Date Wheel_Right;
 WheelLeg_LQR_StructTypeDef WheelLeg_LQR_Struct;
 
 //三次多项式拟合系数
-float Poly_Coefficient[12][4]={
-	{-170.23294706,	243.88651499,	-138.65750575,	-5.64993715},
-	{-4.03825101,	13.44905631,	-14.71670050,	-0.38961878},
-	{-5.28440239,	9.33630334,	-5.77930916,	-0.10131365},
-	{-8.78783877,	16.49594591,	-10.58492351,	-0.43396232},
-	{155.82101033,	-99.35407081,	-23.65049160,	29.59911908},
-	{0.68388289,	6.42491696,	-9.66758078,	4.74895183},
-	{1175.43563013,	-984.38765439,	123.68442473,	95.01680309},
-	{124.01496880,	-100.08053803,	2.59268990,	19.58033705},
-	{42.67334115,	-27.20923288,	-6.47695387,	8.10605260},
-	{11.39397746,	18.56617754,	-38.39411366,	19.54654773},
-	{578.87727866,	-1022.74078857,	633.09159866,	11.09835473},
-	{106.65892585,	-157.58424152,	87.25965976,	-0.30452968}
+static const float Poly_Coefficient[12][4]={
+    {-204.71377921f,	289.63818168f,  -157.59015500f, -4.96782823f},
+	{-7.82854075f,	    19.15680744f,	-17.41989049f,	-0.23003324f},
+	{-7.53928256f,	    12.07032519f,	-6.74694158f,	-0.05542880f},
+	{-13.69695924f,     22.38839045f,	-12.69903703f,	-0.34124181f},
+	{202.15935394f,	    -119.52253547f,	-28.73024512f,	30.05658725f},
+	{8.53035961f,	    0.97505447f,	-8.73026755f,	4.45533442f},
+	{1451.56173722f,	-1146.30857312f,122.25511452f,	96.79758089f},
+	{170.43065142f,	    -127.63122938f,	1.84610137f,	19.79612454f},
+	{55.36361918f,	    -32.73259440f,	-7.86810167f,	8.23133542f},
+	{36.92907744f,	    7.73400354f,	-41.51630122f,	19.92978630f},
+	{825.88702496f,	    -1322.23787701f,739.09041989f,	6.07192070f},
+	{120.04567253f,	    -175.60627295f,	92.90386168f,	-0.44963915f}
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -130,8 +130,8 @@ static void WheelLeg_LQR_Calculated_Displacement(Chassis_Control_StructTypedef *
     WheelLeg_LQR_Struct.Wheel_Speed_Target = Chassis_Control_Struct->Chassis_Control.Vy_Target;
 
 //得到轮子的实际位移 Wheel_Displacement_Feedback
-    Wheel_Left.Displacement_Now  = Motor.Wheel_Motor1.Total_Angle / Motor_3508_Reduction * Chassis_Wheel_Radius * Angle_to_Radain;
-    Wheel_Right.Displacement_Now = Motor.Wheel_Motor2.Total_Angle / Motor_3508_Reduction * Chassis_Wheel_Radius * Angle_to_Radain;
+    Wheel_Left.Displacement_Now  = Motor.Wheel_Motor1.Total_Angle / Motor_3508_Reduction * Chassis_Wheel_Radius * Angle2Radain;
+    Wheel_Right.Displacement_Now = Motor.Wheel_Motor2.Total_Angle / Motor_3508_Reduction * Chassis_Wheel_Radius * Angle2Radain;
     Wheel_Left.Displacement  = -(Wheel_Left.Displacement_Now  - Wheel_Left.Displacement_Init);
     Wheel_Right.Displacement =   Wheel_Right.Displacement_Now - Wheel_Right.Displacement_Init;
 
@@ -273,17 +273,22 @@ static void WheelLeg_LQR_calculation(Chassis_Leg_StructTypedef *Leg_Date, const 
 	if(Chassis_Control.Chassis_Control.Chassis_State == Chassis_Jump)
 	{
 		if(Chassis_Control.WheelLeg_Control_Flag.Chassis_Jump_FLag == 0
-		|| Chassis_Control.WheelLeg_Control_Flag.Chassis_Jump_FLag == 1
-		|| Chassis_Control.WheelLeg_Control_Flag.Chassis_Jump_FLag == 2
 		|| Chassis_Control.WheelLeg_Control_Flag.Chassis_Jump_FLag == 4)
 		{
 			Leg_Date->LQR_Wheel_Torque_Target = Torque_wheel_left + WheelLeg_LQR_Struct.Wheel_Wz_Speed_PID.Output;
 			Leg_Date->LQR_Link_Torque_Target[1] =  ( LQR_K_LR[6] * theta + LQR_K_LR[7] * theta_d + LQR_K_LR[8] * xb + LQR_K_LR[9] * xb_d + LQR_K_LR[10] * phi + LQR_K_LR[11] * phi_d ) + (WheelLeg_LQR_Struct.Leg_Splits_PID.Output);
 		}
+		else if(Chassis_Control.WheelLeg_Control_Flag.Chassis_Jump_FLag == 1
+			 || Chassis_Control.WheelLeg_Control_Flag.Chassis_Jump_FLag == 2)
+		{
+			Leg_Date->LQR_Wheel_Torque_Target = Torque_wheel_left + WheelLeg_LQR_Struct.Wheel_Wz_Speed_PID.Output;
+			Leg_Date->LQR_Link_Torque_Target[1] =  ( (LQR_K_LR[6] * theta + LQR_K_LR[7] * theta_d) + LQR_K_LR[8] * xb + LQR_K_LR[9] * xb_d + LQR_K_LR[10] * phi + LQR_K_LR[11] * phi_d ) + (WheelLeg_LQR_Struct.Leg_Splits_PID.Output);
+		}
 		else if(Chassis_Control.WheelLeg_Control_Flag.Chassis_Jump_FLag == 3)
 		{
 			Leg_Date->LQR_Wheel_Torque_Target = 0.0f;
-			Leg_Date->LQR_Link_Torque_Target[1] =  (LQR_K_LR[6] * theta + LQR_K_LR[7] * theta_d) + (WheelLeg_LQR_Struct.Leg_Splits_PID.Output);
+			// Leg_Date->LQR_Link_Torque_Target[1] =  (LQR_K_LR[6] * theta + LQR_K_LR[7] * theta_d) + (WheelLeg_LQR_Struct.Leg_Splits_PID.Output);
+			Leg_Date->LQR_Link_Torque_Target[1] =  (LQR_K_LR[6] * theta + LQR_K_LR[7] * theta_d + LQR_K_LR[10] * phi + LQR_K_LR[11] * phi_d) + (WheelLeg_LQR_Struct.Leg_Splits_PID.Output);
 		}
 		
 	}
@@ -293,8 +298,9 @@ static void WheelLeg_LQR_calculation(Chassis_Leg_StructTypedef *Leg_Date, const 
 	{
 		if(Chassis_Control.WheelLeg_Control_Flag.Off_ground_Flag == 1)
 		{
-			Leg_Date->LQR_Wheel_Torque_Target = 0;//左轮电机输出置0
-			Leg_Date->LQR_Link_Torque_Target[1] =(LQR_K_LR[6]*(theta) + LQR_K_LR[7]*(theta_d)) + (WheelLeg_LQR_Struct.Leg_Splits_PID.Output);//左关节力矩只保留摆角控制量
+			Leg_Date->LQR_Wheel_Torque_Target = 0.0f;//左轮电机输出置0
+			// Leg_Date->LQR_Link_Torque_Target[1] =(LQR_K_LR[6]*(theta) + LQR_K_LR[7]*(theta_d)) + (WheelLeg_LQR_Struct.Leg_Splits_PID.Output);//左关节力矩只保留摆角控制量
+			Leg_Date->LQR_Link_Torque_Target[1] =(LQR_K_LR[6] * theta + LQR_K_LR[7] * theta_d + LQR_K_LR[10] * phi + LQR_K_LR[11] * phi_d) + (WheelLeg_LQR_Struct.Leg_Splits_PID.Output);//左关节力矩只保留摆角控制量
 		}
 		else
 		{

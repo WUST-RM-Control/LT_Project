@@ -36,6 +36,7 @@ INS_Chassis_Data_StructTypedef INS_Chassis_Data;
 #define INS_CHASSIS_ROLL_SIGN         (+1.0f)   // 右侧抬起为正
 #define INS_CHASSIS_YAW_SIGN          (+1.0f)   // 俯视逆时针为正
 #define INS_CHASSIS_YAW_SPEED_SIGN    (+1.0f)   // 俯视逆时针为正
+#define INS_CHASSIS_Roll_SPEED_SIGN   (+1.0f)   // 俯视逆时针为正
 #define INS_CHASSIS_ACC_Y_SIGN        (-1.0f)   // 向前加速为正
 #define INS_CHASSIS_ACC_Z_SIGN        (+1.0f)   // 向上加速为正
 
@@ -97,6 +98,7 @@ void INS_Chassis_Data_Update(void)
     INS_Chassis_Data.Roll           = INS_CHASSIS_ROLL_SIGN      * INS.Roll;
     INS_Chassis_Data.Yaw            = INS_CHASSIS_YAW_SIGN       * INS.Yaw;
     INS_Chassis_Data.Yaw_Speed      = INS_CHASSIS_YAW_SPEED_SIGN * INS.Gyro[Z];
+    INS_Chassis_Data.Roll_Speed     = INS_CHASSIS_Roll_SPEED_SIGN* INS.Gyro[Y]*Radain2Angle;
     INS_Chassis_Data.Acceleration_Y = INS_CHASSIS_ACC_Y_SIGN     * INS.MotionAccel_n[1];
     INS_Chassis_Data.Acceleration_Z = INS_CHASSIS_ACC_Z_SIGN     * INS.MotionAccel_n[2];
 

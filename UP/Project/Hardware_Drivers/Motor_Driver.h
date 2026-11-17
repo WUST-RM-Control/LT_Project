@@ -25,7 +25,7 @@ typedef struct
     uint8_t If_Online;      //是否在线    
 } Motor_Data_StructTypeDef;
 
-typedef __PACKED_STRUCT
+typedef struct
 {
     Motor_Data_StructTypeDef Chassis1;
     Motor_Data_StructTypeDef Chassis2;

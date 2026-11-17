@@ -108,7 +108,7 @@ void ErrorHandle_Task(void const * argument)
             osDelay(1);
             Motor_DM_CMD_Enable(&Gimbal_Yaw_CAN, Gimbal_Yaw_Send_CAN_ID);
         }
-        // VOFA_JustFloat_Send(&huart4);
+        VOFA_JustFloat_Send(&huart4);
       
       
     osDelay(1);

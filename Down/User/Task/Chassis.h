@@ -57,6 +57,8 @@ typedef enum
 /*===| 对底盘状态的详细描述Flag |===*/
 typedef struct
 {
+	//清零标志位
+	uint8_t Chassis_Flag_Reset;
 
     //倒地缓自起(PID自起)
     //0：非倒地自起状态或标志位赋值完成

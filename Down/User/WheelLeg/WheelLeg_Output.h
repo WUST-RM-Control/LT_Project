@@ -59,4 +59,16 @@ void WheelLeg_Output_Init(void);
 int8_t WheelLeg_Output(Chassis_Control_StructTypedef *Chassis_Control);
 
 
+/**
+ * @brief 发送电机电流，有1ms阻塞(等待修改fdcan接线后去掉)
+ * 
+ * @note 灯条一侧为车尾
+ * @param Joint1 左前
+ * @param Joint2 左后
+ * @param Joint3 右前
+ * @param Joint4 右后
+ * @param Wheel_Left 
+ * @param Wheel_Right 
+ */
+void WheelLeg_Output_Motor_Send_Current(const float Joint1, const float Joint2, const float Joint3, const float Joint4, const float Wheel_Left,const float Wheel_Right);
 #endif

@@ -395,7 +395,8 @@ void RemoteControl_Bool(void)
     
     /*===| 发射状态控制 |===*/
     /*===| 右摇杆控制发射状态 上[关闭摩擦轮] 中[打开摩擦轮]|===*/
-    if      (Remote_Control_Struct.S2 == SW_Mid) RoboControl_Struct.Shoot_State = Shoot_State_Off;
+    if      (Remote_Control_Struct.S2 == SW_Down) RoboControl_Struct.Shoot_State = Shoot_State_Off;
+    else if      (Remote_Control_Struct.S2 == SW_Mid) RoboControl_Struct.Shoot_State = Shoot_State_Off;
     else if (Remote_Control_Struct.S2 == SW_Up) RoboControl_Struct.Shoot_State = Shoot_State_Ready;
     
 	/*===| 按下开火键单发,长按连发 |===*/

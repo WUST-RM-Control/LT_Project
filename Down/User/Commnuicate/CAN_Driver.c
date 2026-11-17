@@ -73,11 +73,13 @@ void CAN_Send_Data_STD(FDCAN_HandleTypeDef *hfdcan, uint16_t ID, uint8_t *TX_Dat
     TxHeader.MessageMarker = 0; 
     
     uint32_t OverTick = 0;
-    while(HAL_FDCAN_GetTxFifoFreeLevel(hfdcan) == 0)
-    {
-        OverTick++;
-        if(OverTick > 1000) break;
-    }
+    // while(HAL_FDCAN_GetTxFifoFreeLevel(hfdcan) == 0)
+    // {
+    //     OverTick++;
+    //     if(OverTick > 1000) break;
+    // }
+    
+    if(HAL_FDCAN_GetTxFifoFreeLevel(hfdcan) != 0)
     HAL_FDCAN_AddMessageToTxFifoQ(hfdcan, &TxHeader, TX_Data);
 }
 
@@ -96,11 +98,13 @@ void CAN_Send_Data_EXD(FDCAN_HandleTypeDef *hfdcan, uint32_t ID, uint8_t *TX_Dat
     TxHeader.MessageMarker = 0; 
     
     uint32_t OverTick = 0;
-    while(HAL_FDCAN_GetTxFifoFreeLevel(hfdcan) == 0)
-    {
-        OverTick++;
-        if(OverTick > 1000) break;
-    }
+    // while(HAL_FDCAN_GetTxFifoFreeLevel(hfdcan) == 0)
+    // {
+    //     OverTick++;
+    //     if(OverTick > 1000) break;
+    // }
+    
+    if(HAL_FDCAN_GetTxFifoFreeLevel(hfdcan) != 0)
     HAL_FDCAN_AddMessageToTxFifoQ(hfdcan, &TxHeader, TX_Data);
 }
 

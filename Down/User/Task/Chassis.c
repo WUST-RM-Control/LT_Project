@@ -40,20 +40,7 @@ Chassis_Control_StructTypedef Chassis_Control_Struct =
     .Leg_Left.Leg_LR  = Leg_L,
     .Leg_Right.Leg_LR = Leg_R
 };
-// void WheelLeg_Output_Motor_Send_Current
-// (const float Joint1, 
-// const float Joint2, 
-// const float Joint3, 
-// const float Joint4, 
-// const float Wheel_Left,
-// const float Wheel_Right)
-// {
-//     Motor_DM_CMD_MIT(&Chassis_JointMotor1_CAN, Chassis_JointMotor1_Send_CAN_ID, 0, 0, 0, 0, Joint1);
-//     Motor_DM_CMD_MIT(&Chassis_JointMotor2_CAN, Chassis_JointMotor2_Send_CAN_ID, 0, 0, 0, 0, Joint2);
-//     Motor_DM_CMD_MIT(&Chassis_JointMotor3_CAN, Chassis_JointMotor3_Send_CAN_ID, 0, 0, 0, 0, Joint3);
-//     Motor_DM_CMD_MIT(&Chassis_JointMotor4_CAN, Chassis_JointMotor4_Send_CAN_ID, 0, 0, 0, 0, Joint4);
-//     Motor_DJI_SendCurrent(&Chassis_DriverMotor_CAN,Chassis_DriverMotor_Send_CAN_ID,0,0,Wheel_Left,Wheel_Right);
-// }
+
 void Chassis_Task(void const * argument)
 {
 	osDelay(100);
@@ -86,10 +73,11 @@ void Chassis_Task(void const * argument)
         /*===| 获得外部数据 |===*/
         Get_Control_Data(&Chassis_Control_Struct);
         
-        // VOFA_JustFloat_AddValue(0,Chassis_Control_Struct.Chassis_Control.Chassis_State);
-        // VOFA_JustFloat_AddValue(1,INS_Chassis_Data.Roll);
-        // VOFA_JustFloat_AddValue(2,INS_Chassis_Data.Pitch);
-        // VOFA_JustFloat_AddValue(3,INS_Chassis_Data.Yaw);
+        VOFA_JustFloat_AddValue(0,Chassis_Control_Struct.Chassis_Control.Chassis_State);
+        VOFA_JustFloat_AddValue(1,INS_Chassis_Data.Roll);
+        VOFA_JustFloat_AddValue(2,INS_Chassis_Data.Pitch);
+        VOFA_JustFloat_AddValue(3,INS_Chassis_Data.Yaw);
+        VOFA_JustFloat_AddValue(4,Chassis_Control_Struct.Chassis_Dt);
         /*===| 底盘运动学解算 |===*/
         WheelLeg_Kinematics_Update(&Chassis_Control_Struct);
 
@@ -160,17 +148,26 @@ void Get_Control_Data(Chassis_Control_StructTypedef *Chassis_Control_Struct)
         RoboControl_State_Last = RoboControl_Struct.Chassis_State;
     }
     //标志位状态赋值
-    if(RoboControl_Struct.Chassis_Control_Flag.Chassis_RESET_Slow_FLag)
+    if(RoboControl_Struct.Chassis_Control_Flag.Chassis_Flag_Reset == 1)
+    {
+        RoboControl_Struct.Chassis_Control_Flag.Chassis_Flag_Reset = 0;
+        Chassis_Control_Struct->WheelLeg_Control_Flag.Chassis_Flag_Reset = 0;
+        Chassis_Control_Struct->WheelLeg_Control_Flag.Chassis_Jump_FLag = 0;
+        Chassis_Control_Struct->WheelLeg_Control_Flag.Chassis_RESET_Slow_FLag = 0;
+        Chassis_Control_Struct->WheelLeg_Control_Flag.Off_ground_Flag = 0;
+        Chassis_Control_Struct->WheelLeg_Control_Flag.Up_Step_Flag = 0;
+    }
+    if(RoboControl_Struct.Chassis_Control_Flag.Chassis_RESET_Slow_FLag&&Chassis_Control_Struct->WheelLeg_Control_Flag.Chassis_RESET_Slow_FLag==0)
     {
         Chassis_Control_Struct->WheelLeg_Control_Flag.Chassis_RESET_Slow_FLag = RoboControl_Struct.Chassis_Control_Flag.Chassis_RESET_Slow_FLag;
         RoboControl_Struct.Chassis_Control_Flag.Chassis_RESET_Slow_FLag = 0;
     }
-    if(RoboControl_Struct.Chassis_Control_Flag.Chassis_Jump_FLag)
+    if(RoboControl_Struct.Chassis_Control_Flag.Chassis_Jump_FLag&&Chassis_Control_Struct->WheelLeg_Control_Flag.Chassis_Jump_FLag==0)
     {
         Chassis_Control_Struct->WheelLeg_Control_Flag.Chassis_Jump_FLag = RoboControl_Struct.Chassis_Control_Flag.Chassis_Jump_FLag;
         RoboControl_Struct.Chassis_Control_Flag.Chassis_Jump_FLag = 0;
     }
-    if(RoboControl_Struct.Chassis_Control_Flag.Up_Step_Flag)
+    if(RoboControl_Struct.Chassis_Control_Flag.Up_Step_Flag&&Chassis_Control_Struct->WheelLeg_Control_Flag.Up_Step_Flag==0)
     {
         Chassis_Control_Struct->WheelLeg_Control_Flag.Up_Step_Flag = RoboControl_Struct.Chassis_Control_Flag.Up_Step_Flag;
         RoboControl_Struct.Chassis_Control_Flag.Up_Step_Flag = 0;
@@ -219,7 +216,7 @@ void Get_Control_Data(Chassis_Control_StructTypedef *Chassis_Control_Struct)
     Chassis_Control_Struct->Chassis_Control.Pitch_dot   = (Chassis_Control_Struct->Chassis_Control.Pitch-Chassis_Control_Struct->Chassis_Control.Pitch_Last)/Chassis_Control_Struct->Chassis_Dt;
     Chassis_Control_Struct->Chassis_Control.Roll_Last  = Chassis_Control_Struct->Chassis_Control.Roll;
     Chassis_Control_Struct->Chassis_Control.Roll       = INS_Chassis_Data.Roll;
-    Chassis_Control_Struct->Chassis_Control.Roll_dot   = (Chassis_Control_Struct->Chassis_Control.Roll-Chassis_Control_Struct->Chassis_Control.Roll_Last)/Chassis_Control_Struct->Chassis_Dt;
+    Chassis_Control_Struct->Chassis_Control.Roll_dot   = INS_Chassis_Data.Roll_Speed;
     Chassis_Control_Struct->Chassis_Control.Yaw_Speed   = INS_Chassis_Data.Yaw_Speed;
 }
 

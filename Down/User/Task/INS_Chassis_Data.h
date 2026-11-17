@@ -31,6 +31,7 @@ typedef struct
     float Roll;             // (°)     车身横滚角, 右侧抬起为正
     float Yaw;              // (°)     航向角, 俯视逆时针为正, -180~180
     float Yaw_Speed;        // (rad/s) 航向角速度, 俯视逆时针为正
+    float Roll_Speed;       // (°/s)   横滚角速度, 右侧抬起为正
     float Acceleration_Y;   // (m/s²)  机体系横向加速度, 向前加速为正
     float Acceleration_Z;   // (m/s²)  机体系竖直加速度, 向上为正
     uint32_t Count;         // 更新次数, 仅调试用

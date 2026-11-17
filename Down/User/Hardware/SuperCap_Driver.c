@@ -39,3 +39,45 @@ void SuperCap_Unpack_Data(uint8_t *Data)
     memcpy((uint8_t *)&SuperCap_FeedBack_Data, Data, 8);
 }
 
+
+// //关节电容测试
+// #include "SuperCap_Driver.h"
+// #include "RoboControl.h"
+// #include "Referee_Unpack.h"
+// #include "Chassis.h"
+
+// /*===| 超电控制数据结构体 |===*/
+// SuperCap_Control_Data_StructTypedef SuperCap_Control_Data;
+// /*===| 超电反馈数据结构体 |===*/
+// SuperCap_FeedBack_Data_StructTypedef SuperCap_FeedBack_Data;
+
+// /***
+//  * @brief 
+//  * 
+//  */
+// void SuperCap_Send_Control_Data(void)
+// {
+//     // /*===| 如果没有裁判系统数据，则强制关断输出 |===*/
+//     // if(Robo_State.chassis_power_limit == 0) SuperCap_Control_Data.Enable_Flag = 0; 
+//     // else SuperCap_Control_Data.Enable_Flag = Robo.SuperCap_State; 
+//     /*===| 如果没有裁判系统数据，则强制关断输出 |===*/
+//     SuperCap_Control_Data.Enable_Flag = Robo.Robo_Enable;
+//     SuperCap_Control_Data.Max_Referee_P = 240;
+//     SuperCap_Control_Data.Power_Buff_Energy = 55;
+//     // VOFA_JustFloat_AddValue(5,SuperCap_Control_Data.Max_Referee_P);
+    
+//     CAN_Send_Data_STD(&SuperCap_CAN, SuperCap_Control_CAN_ID, (uint8_t *)&SuperCap_Control_Data);
+// }
+
+// /**
+//  * @brief 解析超电反馈帧
+//  */
+// void SuperCap_Unpack_Data(uint8_t *Data)
+// {
+//     memcpy((uint8_t *)&SuperCap_FeedBack_Data, Data, 8);
+//     // VOFA_JustFloat_AddValue(0,Chassis_Control_Struct.WheelLeg_Control_Flag.Chassis_Jump_FLag);
+//     // VOFA_JustFloat_AddValue(1,SuperCap_FeedBack_Data.State);
+//     // VOFA_JustFloat_AddValue(2,SuperCap_FeedBack_Data.Chassis_P_x10);
+//     // VOFA_JustFloat_AddValue(3,SuperCap_FeedBack_Data.Referee_P_x10);
+//     // VOFA_JustFloat_AddValue(4,SuperCap_FeedBack_Data.SuperCap_V_x100);
+// }

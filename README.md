@@ -3,45 +3,56 @@
 
 ## 本次提交说明
 
-> 云台 Yaw 轴改用达妙电机（MIT 控制）并重调云台 PID；轮腿底盘调参、修达妙反馈解析、加入"倒着走"方向判定、接入 VOFA。
+> CAN 发送去掉阻塞自旋改成"满了就丢帧"、VOFA/Tof 改 DMA 与中断解包；底盘功能标志位加"一键清零"并改为边沿触发；Roll 由单环改双环、腿长速度环加 P、LQR 系数重拟合与跳跃/自起判据细化。UP 板彻底移除麦轮底盘逻辑，修 packed 结构体的非对齐 HardFault，云台零点重标。
 
-### UP（云台上板）
+### Down（轮腿底盘 / STM32H723）
 
-**Yaw 轴改用达妙 DM 电机**
-- 通信协议换成达妙：`Gimbal_Yaw_Send_CAN_ID` `0x1FF` → `0x05`，`Gimbal_Yaw_Feedback_CAN_ID` `0x206` → `0x105`；反馈解析由 `Motor_DJI_Storage_Data` 改为 `Motor_DM_Storage_Data`。
-- 控制量由 DJI 电流帧改为 `Motor_DM_CMD_MIT`，输出限幅 `25000` → `16384`；电机补偿与 PID 输出统一走 MIT 力矩。
-- 达妙驱动修正（`Motor_DAMIAO_Driver.c/h`）：温度取 `Data[7]`（原取 `Data[6]`，实际是错误码字节）、错误码改取 `Data[0] >> 4`、速度换算系数 `60` → `360`；力矩映射范围 `T_MIN/T_MAX` 由 `±5` 改为 `±16384`。
-- 云台零点重标：`Gimbal_Median_Yaw` `-50.7568359f` → `-173.995865f`。
+**通信与调试**
+- `CAN_Send_Data_STD()` / `CAN_Send_Data_EXD()`：删掉"FIFO 满就空转 1000 次"的阻塞等待（总线 bus-off、电机断电时每帧白转约 30 µs，底盘 1 kHz × 5 帧/周期会把控制周期顶长），改为 `if(HAL_FDCAN_GetTxFifoFreeLevel(...) != 0)` 才入队——发不出去就丢帧，控制周期不再被通信拖住。
+- `VOFA_JustFloat_Send()`：`HAL_UART_Transmit(..., 10)` 阻塞发送 → `HAL_UART_Transmit_DMA()`。
+- `USART_Driver.c`：`huart10` 的 ReceiveToIdle 回调里补上 `Tof_Date_Unpack(UART10_RX_Data)`，Tof 测距数据真正开始解包。
+- `Chassis_Task` 打开 VOFA 通道 0~4：底盘状态、Roll、Pitch、Yaw、`Chassis_Dt`；`WheelLeg_Output.c` 里留下一组常用的力矩/腿长通道注释，按需打开。
 
-**云台控制**
-- Yaw 误差改用 `Caculate_Included_Angle(Motor.Yaw.Total_Angle, Gimbal_Median_Yaw)`，替换原来手写的 ±180° 折返；倒地自起时不再单独用"锁 Yaw"环，与正常模式共用一套 PID（目标 0、反馈取就近 ±180° 方向），删除 `Yaw_Angle_Lock_PID_Struct` / `Yaw_Speed_Lock_PID_Struct` 与两套 `Aim` PID 成员。
-- PID 重调：Pitch 角度环 `10 → 25`（积分限幅 `100`）、Pitch 速度环 `200 → 100`（积分上限 `500 → 2000`）；Yaw 角度环 `25 → 20`（D `30 → 750`）、Yaw 速度环 `350 → 25`（P `1.0 → 80`，输出限幅 `25000 → 16384`）。
-- **修 bug**：Pitch 速度环反馈 `INS_Data_Internal.Gyro[1]*PI_to_Degree/6.0f` 去掉 `/6.0f`——原来反馈被缩小 6 倍，等效把速度环增益放大了 6 倍。
-- 暂时绕过齿槽/摩擦补偿：输出直接取 `Smooth_Start_K * PID`，注释掉 `Motor_Compensation_Get_Data()` 与"从 Flash 手动 memcpy 补偿表"的代码（标定数据仍保留在 `Config`）。
+**底盘状态机**
+- 新增 `WheelLeg_Control_Flag.Chassis_Flag_Reset`（`Chassis.h`）。`Get_Control_Data()` 里检测到它置 1，就一次性把 `Chassis_Flag_Reset / Chassis_Jump_FLag / Chassis_RESET_Slow_FLag / Off_ground_Flag / Up_Step_Flag` 全部清零——侧拨轮打到 `RC_Side < -0.7f` 模式下、左摇杆向左的边沿触发，用来"避免疯车"。
+- 三个功能标志由**电平触发改为边沿触发**：`Chassis_RESET_Slow_FLag && 本地标志 == 0`、`Chassis_Jump_FLag && 本地 == 0`、`Up_Step_Flag && 本地 == 0`。原来遥控器按住不放会每周期重新触发，现在只在 0→1 的那一次生效。
+- 跳跃只在 `Chassis_State == Chassis_FOLLOW` 时允许进入（原来任何状态都能被右摇杆向右打断）；右摇杆向左的上台阶标志位、右摇杆向下设零点都新增/保留在同一 `RC_Side` 模式分支里。
+- 设零点触发位置调整：左摇杆向上的旧入口注释掉，改到**右摇杆向下**的边沿置 `RoboControl_Struct.If_SettingZero = 1`。
+- `Robo_Stop()`：缓失能 `Chassis_OFF_Slow` → 立即失能 `Chassis_OFF`。
+- `Roll_dot` 直接取 `INS_Chassis_Data.Roll_Speed`，不再对 Roll 做差分（1 kHz 下差分噪声太大）。
 
-**其他**
-- `Vofa.c/.h` 换成 JustFloat 实现并在 `main.h` 引入；`Gimbal_Task` 打出 0~18 通道（Yaw/Pitch 角度环与速度环的目标、反馈、输出 + IMU Roll/Pitch/Yaw 与三轴角速度）。
-- 恢复 Yaw 电机掉线重连：`Ticker == 110` 时 `Motor_DM_CMD_ClearErr()` → `Motor_DM_CMD_Enable()`。
-- 遥控使能条件由 `S1 != SW_Down` 改为 `S1 == SW_Up || S1 == SW_Mid`。
-- 电机补偿任务：Pitch 补偿角范围 `9 / -43` → `-55 / -100`，Yaw 补偿 PID 参数重调，输出改 MIT。
+**轮腿控制**
+- 腿长速度环 `P 100 → 120`。
+- Roll 轴由单环改双环：`Leg_Roll_PID` 由 `P55 / D180 / 限幅80` 改为 `P15 / D500 / 限幅50`，并把原本注释掉的 `Leg_Roll_Speed_PID`（`P2.0 / D1.0 / 限幅80`）恢复成串联——角度环出目标、角速度环出补偿力。
+- `WheelLeg_LQR.c`：
+  - `Poly_Coefficient` 由普通全局改成 `static const float`，12×4 系数整表重拟合。
+  - 跳跃标志 `Chassis_Jump_FLag == 1 / == 2` 单独成一个分支：轮力矩 = LQR 轮力矩 + `Wheel_Wz_Speed_PID.Output`，关节力矩补上 `xb / phi` 两项（原来跳起来只有摆角项，位移与俯仰不受控）。
+  - 其它状态（含离地）的关节力矩补上 `K[10]*phi + K[11]*phi_d`。
+- `WheelLeg_Chassis.c`：
+  - 缓倒地自起二段完成判据补 `Leg_Length_Target - Leg_Length_Min < 0.01`——必须真的收到最短才算完成，避免"腿长目标还没到位就切状态"。
+  - `Chassis_RESET_Slow_FLag_Return == 1` → `!= 0`。
+  - 跳跃里补 `Off_ground_Flag = 1`，跳起来之后不再让离地检测改腿长。
+  - 收腿行程按 200:1 的比例重标注释，并标注"激进参数，请确保电池电量在一格以上或接缓冲电容"。
+- `WheelLeg_Output_Motor_Send_Current()` 由 `static` 提升为普通函数并在 `.h` 中声明，补 doxygen（灯条一侧为车尾；Joint1/2 左前/左后，Joint3/4 右前/右后）。
 
-### Down（轮腿底盘）
+**宏与命名统一（`Define.h`）**
+- 角度/弧度换算宏去重：只保留 `Angle2Radain` / `Radain2Angle`，并新增 double 版本 `Angle2Radain_double` / `Radain2Angle_double`；删除 `Angle_to_Radain` / `Radain_to_Angle` / `Rad2Angle` 三种旧写法。
+- `WheelLeg_Kinematics.c`、`WheelLeg_SpringComp.c`（其内部重复定义一并删除）、`INS.c` 全部改用新宏名。
 
-**遥控与运控**
-- 新增 `RoboControl_Struct.Target_Direction_Flag`：云台相对底盘超过 ±90° 时判定为"倒着走"，`Target_Direction_Err` 取 ±180° 就近方向，`Robo_Target_Vy` 随符号取反；`RoboControl.h` 补充字段与注释。
-- 腿长调节速度 `0.16f` → `0.4f` m/s。
-- S2 下拨由直接失能 `Chassis_OFF` 改为缓失能 `Chassis_OFF_Slow`。
-- 通信任务周期 `5 ms` → `1 / 2 / 2 ms` 分段发送；`Chassis_Send_Func_Data()` 增加 `Chassis_OFF` 状态下也下发。
-- `Leg_Length_Max` `0.38f` → `0.366f`。
+**安全**
+- `INS.h`：`INS_HEAT_ENABLE` `1 → 0`，并在注释里写明"正常测试一定要关，Debug 断点在断点期间会让加热持续输出，喵板会烧"。
 
-**轮腿**
-- 缓倒地自起二段：摆角速度 `90 → 100` °/s、收腿速度 `0.5 → 0.4` m/s、目标总摆角 `±9° → 0°`；摆腿的 `Acc_and_Dec()` 移入 `else` 分支，并增加"总摆角已接近 90°"时提前进入收腿判据；状态切换延时 `0.1 → 0.05` s。
-- 跳跃：蹬伸腿长 `0.20/0.25/0.33` → `0.30/0.33/0.35` m，蹬腿前馈 `330 → 360` N、斜率 `25 → 15`。
-- LQR 增益拟合表 `Poly_Coefficient` 全部重新拟合（12×4 系数更新）。
+### UP（云台上板 / STM32G474）
 
-**底层（达妙电机反馈解析）**
-- 错误码取 `Data[0] >> 4`（原 `Data[0] & 0x0F` 被当作错误码）、温度取 `Data[7]`、1 拖 4 收包补 `Error_ID = Data[7]`；只有 `Error_ID == 1` 才清掉线计数并置在线，`Date_New` 改为每帧置位。
-- `Define.h` 删除遗留的 LQR 单字母下标宏（`S/S_D/YAW/...`）与旧电机 ID 宏；`PID.c` 缩进整理；`Chassis.c` 设零点完成提示音改 `SystemStart`。
+- **彻底移除麦轮底盘**：`Chassis_Task` 里里程计积分、缓启动、按云台 Yaw 偏移的全向解算、麦轮运动学与四路 PID、功率限制、电流下发全部注释掉，`osDelay(1) → osDelay(10)`。上板现在只做云台。
+- **修 packed 结构体的非对齐访问**：`Motor_Driver.h` 的 `typedef __PACKED_STRUCT` 改为 `typedef struct`——与之前 `IMU_Cal.h` 同一类问题（packed 成员取地址传给 `float *`，Cortex-M7 会报 UNALIGNED UsageFault → HardFault）。`Communicate.h` 6 处 `__packed struct` 统一改为 `__PACKED_STRUCT`。
+- 云台零点重标：`Gimbal_Median_Yaw` `-173.995865f → 94.5195465f`。
+- `Vofa.c` 同 Down 改 `HAL_UART_Transmit_DMA()`，`ErrorHandle.c` 打开 `VOFA_JustFloat_Send(&huart4)`。
+- `RoboControl.c`：S2 下拨（`SW_Down`）也置 `Shoot_State_Off`，与中位一并处理。
+
+### 工程文件
+- FreeRTOS 的 `port.c` / `portmacro.h` 由 `Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/` 移到 `Down/Middlewares/` 根下（纯重命名，`R100`），`Kawashiro_MC02.uvprojx` 同步更新引用路径。
+- 同步暂存了重新编译产生的 `Kawashiro_MC02.hex`、`Kawashiro_Frame_G474.hex`、`*.uvoptx`、`*.uvguix.*`、`.vscode/*`、`*.dep`。
 
 ## Zzz_test 分支提交记录
 
@@ -64,3 +75,4 @@
 | 2026-11-02 00:28 | 删除编译文件，并修改了README.md<br>优化了氮气弹簧补偿的一个bug<br>修正了腿部数据的一个逻辑错误<br>改了倒地自起的参数，让机体更快自起 |
 | 2026-11-09 06:33 | 轮腿下位机由 G474 换成 DM_MC02(H723)<br>上层代码重新分层并迁移轮腿底盘<br>加入了更好的陀螺仪驱动<br>氮气弹簧标定落盘并加头帧校验<br>腿部 EKF 抗饱和与卡方逻辑改造<br>UP 修 Yaw_Err的赋值 bug，重标云台零点与 Pitch 限位 |
 | 2026-11-13 01:29 | 云台Yaw轴改用达妙电机(MIT控制)并重调云台PID<br>修Pitch速度环反馈被除以6的bug<br>轮腿底盘新增"倒着走"方向判定，腿长调节与缓失能调整<br>修正达妙电机反馈解析(错误码/温度字段)<br>跳跃与倒地自起调参、LQR增益表重拟合<br>UP/Down接入VOFA JustFloat调试通道 |
+| 2026-11-17 14:23 | CAN发送改为满则丢帧的非阻塞方式，VOFA改DMA，Tof测距加入解包<br>底盘标志位新增一键清零，跳跃/缓起/上台阶改边沿触发，跳跃限定FOLLOW<br>新增Roll角速度并取消差分，Roll加角速度环串联，腿长速度环加P<br>LQR增益表重拟合并整理跳跃/离地分支，倒地自起与跳跃判据细化<br>角度换算宏统一为Angle2Radain/Radain2Angle，INS加热默认关闭<br>UP移除麦轮底盘，修packed结构体非对齐HardFault，重标云台零点 |

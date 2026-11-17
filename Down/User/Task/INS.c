@@ -116,7 +116,7 @@ void C_IMU_Reset(void)
 
 void INS_Task(void)
 {
-    
+
     INS_Init();
 
     for(;;)
@@ -187,7 +187,7 @@ void INS_Task(void)
             INS_Data_Internal.Yaw = INS.Yaw;
             INS_Data_Internal.Roll = INS.Pitch;
             INS_Data_Internal.Pitch = INS.Roll;
-            INS_Data_Internal.Yaw_Speed = INS.Gyro[Z] * Rad2Angle;
+            INS_Data_Internal.Yaw_Speed = INS.Gyro[Z] * Radain2Angle;
             INS_Data_Internal.YawTotalAngle = INS_Data_Internal.Yaw_Round * 360.0f + INS.Yaw;
 
             INS.Last_Yaw = INS.Yaw;
@@ -216,7 +216,7 @@ void INS_Task(void)
         /* 不做姿态解算：只把校准后的数据与 Z 轴角速度递出去 */
         memcpy(INS_Data_Internal.Acc, INS.Accel, 12);
         memcpy(INS_Data_Internal.Gyro, INS.Gyro, 12);
-        INS_Data_Internal.Yaw_Speed = INS.Gyro[Z] * Rad2Angle;
+        INS_Data_Internal.Yaw_Speed = INS.Gyro[Z] * Radain2Angle;
 #endif
         
         osDelay(INS_TASK_PERIOD);

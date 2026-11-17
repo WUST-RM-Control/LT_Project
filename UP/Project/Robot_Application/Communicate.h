@@ -9,7 +9,7 @@
 //8字节能打成一个包发出
 //null可以补位或字节数，使凑成8位或8字节
 
-typedef __packed struct
+typedef __PACKED_STRUCT 
 {
 	// int8_t Right_X;
 	// int8_t Right_Y;
@@ -35,7 +35,7 @@ typedef __packed struct
 	uint8_t S2;
 } Remote_Pack1_TypedefStruct;
 
-typedef __packed struct
+typedef __PACKED_STRUCT 
 {
 	int8_t  Mouse_Vx;
     int8_t  Mouse_Vy;
@@ -64,7 +64,7 @@ typedef __packed struct
 } Remote_Pack2_TypedefStruct;
 
 //new
-typedef __packed struct
+typedef __PACKED_STRUCT 
 {
 	//4字节
     int16_t Yaw_Errx100;
@@ -85,7 +85,7 @@ typedef __packed struct
 }Double_Board_Up_to_Down_TypedefStruct;
 
 //original
-//typedef __packed struct
+//typedef __PACKED_STRUCT 
 //{
 //    int16_t Yaw_Errx100;
 //    int16_t Gimbal_Yaw_TotalAnglex100;
@@ -103,7 +103,7 @@ typedef __packed struct
 //}Double_Board_Up_to_Down_TypedefStruct;
 
 
-typedef __packed struct
+typedef __PACKED_STRUCT 
 {
 //	uint8_t Robo_Enable:2;
 //	uint8_t Gimbal_State:2;
@@ -122,7 +122,7 @@ typedef __packed struct
 	
 } Double_Board_Down_to_UP_Referee_TypedefStruct;
 
-typedef __packed struct
+typedef __PACKED_STRUCT 
 {
     uint8_t Recover_from_ground_Flag;
     

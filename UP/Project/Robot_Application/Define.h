@@ -115,7 +115,7 @@
         
 /*===| 云台相关参数定义 |===*/  
 //    #define Gimbal_Median_Yaw                  -105.292969       //云台朝前时Yaw电机的编码值
-    #define Gimbal_Median_Yaw                   -173.995865f      //云台朝前时Yaw电机的编码值
+    #define Gimbal_Median_Yaw                   94.5195465f      //云台朝前时Yaw电机的编码值
 	#define Gimbal_Median_Pitch                 0        //云台水平时Pitch电机的角度
 
     #define Gimbal_Pitch_Limit_Up               90.0f

@@ -61,8 +61,6 @@
 	/*===| 实际力矩(Nm)=发送的力矩电流整数 * (20/16384) * 3508屁股力矩常数(0.01562Nm/A) * 减速比 |===*/  
 	#define Current2Torque 					   3.186647037e-4f	//    (20/16384)              *    (0.3)    / (3591/187)  *  (16.71)
 	#define Torque2Current 					   3.138094644e+3f  //电调最大持续电流/输出限幅      转矩系数   19.2减速比    16.71减速比
-	#define Radain2Angle					   57.29578f
-	#define Angle2Radain					   0.0174533f
 	
 	#define K_gear2chain                       1.0f
         
@@ -85,10 +83,12 @@
     #define Leg_Length_Max  0.366f
 
 //	#define 	PI   3.14159265359f
-	#define 	Angle_to_Radain	 0.0174533f //角度to弧度(PI/180)
-    #define	    Radain_to_Angle	 57.29578f  //弧度to角度(180/PI)
-    /* @note MC02 原有代码(INS.c 等)用 Rad2Angle,Down 的 Define.h 里没有,补一条兼容定义 */
-    #define     Rad2Angle        (180.0f/PI)
+	#define 	Angle2Radain	 0.0174533f //角度to弧度(PI/180)
+    #define	    Radain2Angle	 57.29578f  //弧度to角度(180/PI)
+	#define 	Angle2Radain_double	 0.0174532925199432957692369076849 //角度to弧度(PI/180)
+    #define	    Radain2Angle_double	 57.295779513082320876798154814105  //弧度to角度(180/PI)
+    // /* @note MC02 原有代码(INS.c 等)用 Rad2Angle,Down 的 Define.h 里没有,补一条兼容定义 */
+    // #define     Rad2Angle        (180.0f/PI)
     
 	#define 	MB    13
 	#define 	RL_W  0.523

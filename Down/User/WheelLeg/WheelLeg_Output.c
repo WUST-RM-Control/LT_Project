@@ -23,8 +23,6 @@ static WheelLeg_Output_StructTypedef WheelLeg_Output_Struct;
 
 //按比例限幅一对关节电机力矩
 static void WheelLeg_Output_LimitPair(float *back_nm,float *front_nm,float limit_nm);
-//发送电机电流，有1ms阻塞(等待修改fdcan接线后去掉)
-static void WheelLeg_Output_Motor_Send_Current(const float Joint1, const float Joint2, const float Joint3, const float Joint4, const float Wheel_Left,const float Wheel_Right);
 //PID计算
 static void Wheel_Output_PID_calculation(Chassis_Control_StructTypedef *Chassis_Control);
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -47,11 +45,11 @@ void WheelLeg_Output_Init(void)
 	//腿长位置环PID
 	PID_Init(&WheelLeg_Output_Struct.Leg_Length_PID,   20.0f, 	0.0f, 	100.0f, 	0.0f, 	0.0f, 	3.0f);
 	//腿长速度环PID
-	PID_Init(&WheelLeg_Output_Struct.Leg_Left.Leg_Length_Speed_PID, 100.0f, 0.4f, 	0.0f, 	30.0f, 20.0f, 50.0f);
-	PID_Init(&WheelLeg_Output_Struct.Leg_Right.Leg_Length_Speed_PID,100.0f, 0.4f, 	0.0f, 	30.0f, 20.0f, 50.0f);
+	PID_Init(&WheelLeg_Output_Struct.Leg_Left.Leg_Length_Speed_PID, 120.0f, 0.4f, 	0.0f, 	30.0f, 20.0f, 50.0f);
+	PID_Init(&WheelLeg_Output_Struct.Leg_Right.Leg_Length_Speed_PID,120.0f, 0.4f, 	0.0f, 	30.0f, 20.0f, 50.0f);
     //Roll轴横滚角补偿PID
-	PID_Init(&WheelLeg_Output_Struct.Leg_Roll_PID,      55.0f, 0.0f, 180.0f, 0.0f, 0.0f, 80.0f);//Roll轴角速度°/s
-	// PID_Init(&WheelLeg_Output_Struct.Leg_Roll_Speed_PID,0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.1f);
+	PID_Init(&WheelLeg_Output_Struct.Leg_Roll_PID,      15.0f, 0.0f, 500.0f, 0.0f, 0.0f, 50.0f);//Roll轴角速度°/s
+	PID_Init(&WheelLeg_Output_Struct.Leg_Roll_Speed_PID,2.0f, 0.0f, 0.0f, 1.0f, 0.0f, 80.0f);
 //    //Roll轴横滚角补偿PID
 //	PID_Init(&WheelLeg_Output_Struct.Leg_Roll_PID,      20.0f, 0.0f, 80.0f, 0.0f, 0.0f, 40.0f);//Roll轴角速度°/s
 //	PID_Init(&WheelLeg_Output_Struct.Leg_Roll_Speed_PID,0.8f, 0.0f, 0.0f, 1.4f, 0.0f, 80.0f);
@@ -143,7 +141,7 @@ int8_t WheelLeg_Output(Chassis_Control_StructTypedef *Chassis_Control)
     // }
 
     float K_PID_Control_Weight = 1.0f;
-        
+	
     //赋个值
     WheelLeg_Output_Struct.Leg_Left.Motor_Send_Torque = 0.0f;
     WheelLeg_Output_Struct.Leg_Right.Motor_Send_Torque = 0.0f;
@@ -304,6 +302,23 @@ int8_t WheelLeg_Output(Chassis_Control_StructTypedef *Chassis_Control)
     // VOFA_JustFloat_AddValue(11,WheelLeg_Output_Struct.Leg_Right.Leg_Angle_Speed_PID.Target);
     // VOFA_JustFloat_AddValue(12,WheelLeg_Output_Struct.Leg_Right.Leg_Length_Speed_PID.Feedback);
     // VOFA_JustFloat_AddValue(13,WheelLeg_Output_Struct.Leg_Right.Leg_Length_Speed_PID.Target);
+	
+//    VOFA_JustFloat_AddValue(4,WheelLeg_Output_Struct.Leg_Length_PID.Feedback);
+//    VOFA_JustFloat_AddValue(5,WheelLeg_Output_Struct.Leg_Length_PID.Target);
+//    VOFA_JustFloat_AddValue(6,WheelLeg_Output_Struct.Leg_Length_PID.Output);
+//    VOFA_JustFloat_AddValue(7,WheelLeg_Output_Struct.Leg_Right.Leg_Length_Speed_PID.Feedback);
+//    VOFA_JustFloat_AddValue(8,WheelLeg_Output_Struct.Leg_Right.Leg_Length_Speed_PID.Target);
+//    VOFA_JustFloat_AddValue(9,WheelLeg_Output_Struct.Leg_Right.Leg_Length_Speed_PID.Output);
+//    VOFA_JustFloat_AddValue(10,Chassis_Control_Struct.Leg_Right.Length_Feedback);
+//	VOFA_JustFloat_AddValue(11,WheelLeg_Output_Struct.Leg_Left.Motor_Send_Torque);
+//	VOFA_JustFloat_AddValue(12,WheelLeg_Output_Struct.Leg_Right.Motor_Send_Torque);
+//    VOFA_JustFloat_AddValue(4,WheelLeg_Output_Struct.Leg_Length_PID.Feedback);
+    // VOFA_JustFloat_AddValue(4,WheelLeg_Output_Struct.Leg_Left.Motor_Send_Torque13);
+    // VOFA_JustFloat_AddValue(5,WheelLeg_Output_Struct.Leg_Left.Motor_Send_Torque24);
+    // VOFA_JustFloat_AddValue(6,WheelLeg_Output_Struct.Leg_Left.Motor_Send_Torque);
+    // VOFA_JustFloat_AddValue(7,WheelLeg_Output_Struct.Leg_Right.Motor_Send_Torque13);
+    // VOFA_JustFloat_AddValue(8,WheelLeg_Output_Struct.Leg_Right.Motor_Send_Torque24);
+    // VOFA_JustFloat_AddValue(9,WheelLeg_Output_Struct.Leg_Right.Motor_Send_Torque);
     //失能:关节电机和轮电机电流全部输出0
     if(Chassis_Control->Chassis_Control.Chassis_State == Chassis_OFF||Remote_Control_Struct.S2 == SW_Mid)
     {
@@ -379,7 +394,7 @@ static void WheelLeg_Output_LimitPair(float *back_nm,float *front_nm,float limit
  * @param Wheel_Left 
  * @param Wheel_Right 
  */
-static void WheelLeg_Output_Motor_Send_Current
+void WheelLeg_Output_Motor_Send_Current
 (const float Joint1, 
 const float Joint2, 
 const float Joint3, 
@@ -404,13 +419,14 @@ const float Wheel_Right)
  */
 static void Wheel_Output_PID_calculation(Chassis_Control_StructTypedef *Chassis_Control)
 {
+    
     //腿长串级PID:位置外环输出目标腿长速度，速度内环输出虚拟腿力
     PID_Position_Calculate(&WheelLeg_Output_Struct.Leg_Length_PID, Chassis_Control->Chassis_Control.Leg_Length_Target,  Chassis_Control->Chassis_Control.Leg_Length_Feebback);
     PID_Position_Calculate(&WheelLeg_Output_Struct.Leg_Left.Leg_Length_Speed_PID,  WheelLeg_Output_Struct.Leg_Length_PID.Output,  Chassis_Control->Leg_Left.Length_Speed);
     PID_Position_Calculate(&WheelLeg_Output_Struct.Leg_Right.Leg_Length_Speed_PID, WheelLeg_Output_Struct.Leg_Length_PID.Output, Chassis_Control->Leg_Right.Length_Speed);
     
     PID_Position_Calculate(&WheelLeg_Output_Struct.Leg_Roll_PID,  0,  Chassis_Control->Chassis_Control.Roll);
-    // PID_Position_Calculate(&WheelLeg_Output_Struct.Leg_Roll_Speed_PID, WheelLeg_Output_Struct.Leg_Roll_PID.Output, Chassis_Control->Chassis_Control.Roll_dot);
+    PID_Position_Calculate(&WheelLeg_Output_Struct.Leg_Roll_Speed_PID, WheelLeg_Output_Struct.Leg_Roll_PID.Output, Chassis_Control->Chassis_Control.Roll_dot);
 
     //摆角串级PID:位置外环输出目标摆角速度，速度内环输出虚拟摆角力矩(不需要PID控制摆角时不生效)
     if(Chassis_Control->Chassis_Control.Chassis_State == Chassis_Recover
