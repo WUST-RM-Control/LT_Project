@@ -408,7 +408,7 @@ void RemoteControl_Bool(void)
             else if (Remote_Control_Struct.RC_Right_Y < -0.8f && Remote_Control_Last_Struct.RC_Right_Y > -0.8f)
             {
                 // Chassis_Control_Struct.Up_Slope_Mode_Flag = 0;
-                RoboControl_Struct.If_SettingZero = 1;//设零点
+                // RoboControl_Struct.If_SettingZero = 1;//设零点
             }
 		}
 		 /*===| 开启小陀螺 |===*/

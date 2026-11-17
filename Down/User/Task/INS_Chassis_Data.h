@@ -34,8 +34,8 @@ typedef struct
     float Roll_Speed;       // (°/s)   横滚角速度, 右侧抬起为正
     float Acceleration_Y;   // (m/s²)  机体系横向加速度, 向前加速为正
     float Acceleration_Z;   // (m/s²)  机体系竖直加速度, 向上为正
-    uint32_t Count;         // 更新次数, 仅调试用
-    uint8_t If_Ready;       // 1:已经收到过有效姿态数据(替代 Down 的 INS_Data_Gimbal.If_INS_Init)
+    // uint32_t Count;         // 更新次数, 仅调试用
+    // uint8_t If_Ready;       // 1:已经收到过有效姿态数据(替代 Down 的 INS_Data_Gimbal.If_INS_Init)
 } INS_Chassis_Data_StructTypedef;
 
 extern INS_Chassis_Data_StructTypedef INS_Chassis_Data;

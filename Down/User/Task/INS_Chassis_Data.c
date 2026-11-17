@@ -110,8 +110,8 @@ void INS_Chassis_Data_Update(void)
     // INS_Chassis_Data.Yaw   = INS_Chassis_Wrap_Angle(INS_Chassis_Data.Yaw - INS_CHASSIS_MOUNT_YAW_DEG);
 #endif
 
-    INS_Chassis_Data.Count++;
-    // 收到过数据即认为姿态可用:DM_MC02 的 INS 是板载 BMI088+EKF,不存在 Down 那种"外部 IMU 掉线"状态,
-    // 这里用"是否已经跑过更新"代替 Down 的 INS_Data_Gimbal.If_INS_Init
-    INS_Chassis_Data.If_Ready = 1;
+    // INS_Chassis_Data.Count++;
+    // // 收到过数据即认为姿态可用:DM_MC02 的 INS 是板载 BMI088+EKF,不存在 Down 那种"外部 IMU 掉线"状态,
+    // // 这里用"是否已经跑过更新"代替 Down 的 INS_Data_Gimbal.If_INS_Init
+    // INS_Chassis_Data.If_Ready = 1;
 }

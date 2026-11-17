@@ -50,9 +50,6 @@ void WheelLeg_Output_Init(void)
     //Roll轴横滚角补偿PID
 	PID_Init(&WheelLeg_Output_Struct.Leg_Roll_PID,      15.0f, 0.0f, 500.0f, 0.0f, 0.0f, 50.0f);//Roll轴角速度°/s
 	PID_Init(&WheelLeg_Output_Struct.Leg_Roll_Speed_PID,2.0f, 0.0f, 0.0f, 1.0f, 0.0f, 80.0f);
-//    //Roll轴横滚角补偿PID
-//	PID_Init(&WheelLeg_Output_Struct.Leg_Roll_PID,      20.0f, 0.0f, 80.0f, 0.0f, 0.0f, 40.0f);//Roll轴角速度°/s
-//	PID_Init(&WheelLeg_Output_Struct.Leg_Roll_Speed_PID,0.8f, 0.0f, 0.0f, 1.4f, 0.0f, 80.0f);
 
     WheelLeg_Output_Motor_Send_Current(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
     osDelay(5);
@@ -176,9 +173,9 @@ int8_t WheelLeg_Output(Chassis_Control_StructTypedef *Chassis_Control)
         }
         else
         {
-            Leg_Left_Link_F = Chassis_Control->Leg_Left.GasSpring_Output- WheelLeg_Output_Struct.Leg_Roll_PID.Output + Gravity_Comp 
+            Leg_Left_Link_F = Chassis_Control->Leg_Left.GasSpring_Output- WheelLeg_Output_Struct.Leg_Roll_Speed_PID.Output + Gravity_Comp 
                             + WheelLeg_Output_Struct.Leg_Left.Leg_Length_Speed_PID.Output * K_PID_Control_Weight;
-            Leg_Right_Link_F= Chassis_Control->Leg_Right.GasSpring_Output + WheelLeg_Output_Struct.Leg_Roll_PID.Output + Gravity_Comp
+            Leg_Right_Link_F= Chassis_Control->Leg_Right.GasSpring_Output + WheelLeg_Output_Struct.Leg_Roll_Speed_PID.Output + Gravity_Comp
                             + WheelLeg_Output_Struct.Leg_Right.Leg_Length_Speed_PID.Output * K_PID_Control_Weight;
             Leg_Left_Angle_Torque  = Chassis_Control->Leg_Left.LQR_Link_Torque_Target[1];
             Leg_Right_Angle_Torque = Chassis_Control->Leg_Right.LQR_Link_Torque_Target[1];
@@ -197,9 +194,9 @@ int8_t WheelLeg_Output(Chassis_Control_StructTypedef *Chassis_Control)
         case 1:
         case 4:
         //正常
-            Leg_Left_Link_F = Chassis_Control->Leg_Left.GasSpring_Output- WheelLeg_Output_Struct.Leg_Roll_PID.Output + Gravity_Comp 
+            Leg_Left_Link_F = Chassis_Control->Leg_Left.GasSpring_Output- WheelLeg_Output_Struct.Leg_Roll_Speed_PID.Output + Gravity_Comp 
                             + WheelLeg_Output_Struct.Leg_Left.Leg_Length_Speed_PID.Output * K_PID_Control_Weight;
-            Leg_Right_Link_F= Chassis_Control->Leg_Right.GasSpring_Output + WheelLeg_Output_Struct.Leg_Roll_PID.Output + Gravity_Comp
+            Leg_Right_Link_F= Chassis_Control->Leg_Right.GasSpring_Output + WheelLeg_Output_Struct.Leg_Roll_Speed_PID.Output + Gravity_Comp
                             + WheelLeg_Output_Struct.Leg_Right.Leg_Length_Speed_PID.Output * K_PID_Control_Weight;
             Leg_Left_Angle_Torque  = Chassis_Control->Leg_Left.LQR_Link_Torque_Target[1];
             Leg_Right_Angle_Torque = Chassis_Control->Leg_Right.LQR_Link_Torque_Target[1];
